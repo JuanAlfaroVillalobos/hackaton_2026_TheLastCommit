@@ -1,7 +1,7 @@
 # Vecinos — Red de ayuda vecinal
 
 > Hackatón 2026 · Equipo **TheLastCommit**
-> Documento de requisitos (fuente de verdad del proyecto). Versión 0.4, 2026-11-07.
+> Documento de requisitos (fuente de verdad del proyecto). Versión 0.5, 2026-11-07. Plan de trabajo del equipo: [PLAN.md](PLAN.md).
 
 Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` requerimiento no funcional, `P01` pantalla. Lo marcado **(supuesto)** es una propuesta del equipo que falta confirmar (ver la sección 12). Para citar una sección se usa `README #4.1` o «sección 4.1».
 
@@ -28,7 +28,15 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 
 **Problema:** Los vecinos de una misma zona tienen oficios y habilidades (gasfitería, electricidad, cuidado de niños, clases, primeros auxilios…) que podrían ofrecer a quienes viven cerca, pero no hay un canal confiable para encontrarse, coordinar la ayuda y saber a quién se le abre la puerta. En una emergencia (sismo, incendio, inundación) tampoco hay forma de saber quién de la zona necesita ayuda, sobre todo si se cae internet.
 
-**Objetivo general:** Una aplicación móvil para Android (iOS queda para una fase posterior) que conecte a los vecinos para pedir y ofrecer ayuda según sus oficios, registre el tiempo de ayuda dado y recibido como reputación, y active un modo de emergencia colectivo por zona que siga funcionando con conectividad degradada.
+**Reto de la hackatón (48 h):** crear un aplicativo que sirva a los ciudadanos para obtener, con costos mínimos y sin necesidad de transporte mayor, productos y servicios avalados por recomendaciones de vecinos. Debe integrar mecanismos de intercambio solidario y evolucionar en situaciones de emergencia para coordinar soporte a los vecinos.
+
+**Objetivo general:** Una aplicación móvil para Android (iOS queda para una fase posterior) con tres pilares:
+
+1. **Economía local (servicios de proximidad):** directorio de oficios, servicios y productos del barrio validados con el «Visto Bueno Vecinal», y una bolsa de trabajos rápidos.
+2. **Economía solidaria (cadena de favores):** muro para resolver necesidades sin dinero (favores, préstamo de herramientas, donación de materiales, intercambio de habilidades, movilidad solidaria), con el tiempo de ayuda registrado como reputación.
+3. **Emergencia y soporte:** modo de emergencia colectivo por zona, tablero de ayuda humanitaria (reportes de vulnerabilidad y recursos críticos) y directorio de grupos de apoyo.
+
+Todo debe seguir funcionando con baja conectividad: los datos se guardan en el teléfono y se sincronizan al volver la señal, y las acciones críticas viajan **por SMS** cuando no hay internet.
 
 **Indicadores de éxito (MVP de la hackatón):**
 
@@ -46,7 +54,7 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 | **Vecino** | Persona registrada. Puede ser solicitante y prestador a la vez; el rol depende de la necesidad, no de la cuenta. | App Android |
 | **Solicitante** | Vecino que publica una necesidad. | App Android |
 | **Prestador** | Vecino que acepta una necesidad y presta el servicio. | App Android |
-| **Móvil intermediario** | Teléfono Android con señal de SMS e internet que ejecuta la misma app en «modo intermediario»: recibe los SMS cifrados, los reenvía al backend y difunde las respuestas por SMS (Fase 2). | SMS + HTTPS |
+| **Móvil intermediario** | Teléfono Android con señal de SMS e internet que ejecuta la misma app en «modo intermediario»: recibe los SMS cifrados, los reenvía al backend y difunde las respuestas por SMS. | SMS + HTTPS |
 | **Sistema** | Procesos automáticos: expiración, conteo de emergencia, alertas periódicas, cálculo del tema. | Cloud Functions |
 | **Servicios externos** | Firebase (Auth, Firestore, Functions, Storage, FCM, Hosting, App Check), Google y Facebook como proveedores de identidad, Open-Meteo, Google Maps SDK for Android. | API / SDK |
 
@@ -56,14 +64,20 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 
 | Módulo | Detalle | Fase |
 | ------ | ------- | ---- |
-| Cuentas | Registro con correo + clave, Google, enlace mágico por correo, selección de oficios, foto opcional, teléfono en el perfil | MVP |
+| Cuentas | Registro con correo + clave, Google, enlace mágico por correo, teléfono obligatorio, selección de oficios, foto | MVP |
+| Identidad | Validación con selfie, foto del DNI, número de DNI y nombres; insignia «Identidad verificada» | MVP |
+| Onboarding | Tutorial inicial y guía de ayuda para personas que no son nativas digitales | MVP |
+| Economía local | Directorio de oficios, servicios y productos cercanos; «Visto Bueno Vecinal»; bolsa de trabajos rápidos con publicación en 3 pasos | MVP |
+| Economía solidaria | Muro de favores (necesidades y ofertas solidarias) | MVP |
+| Emergencia | Tablero humanitario: reportes de vulnerabilidad geolocalizados y recursos críticos; directorio de servicios y grupos de apoyo | MVP |
+| Offline | Caché local, bandeja de salida que sincroniza al volver la señal, acciones críticas por SMS, validación de ubicación | MVP |
 | Cuentas | Facebook, inicio de sesión con teléfono por código SMS | Fase 2 |
 | Necesidades | Publicar, listar ordenado por afinidad con mis oficios, ver detalle, aceptar | MVP |
 | Servicio | Mapa con la ubicación, tiempo estimado de llegada (5/10/15 min), ubicación del prestador en vivo (también en segundo plano), "Ya llegué", confirmación, conteo en bloques de 30 min, cierre con doble confirmación, calificación opcional | MVP |
 | Notificaciones | Push con FCM y listeners en tiempo real de Firestore | MVP |
 | Emergencia | Botón de emergencia, activación por umbral en zona, mapa de emergencia, alerta cada minuto a pantalla completa (también con el teléfono bloqueado), "Estoy bien" | MVP |
-| Temas | Tema normal, lluvia (azul noche), calor (naranja), emergencia (rojo) | MVP |
-| Contingencia | Envío y recepción automáticos de SMS cifrados entre la app y un móvil intermediario | Fase 2 |
+| Temas | Tema normal (naranja de marca), lluvia (azul noche), calor (terracota), emergencia (rojo) | MVP |
+| Contingencia SMS | Envío y recepción automáticos de SMS cifrados entre la app y un móvil intermediario (protocolo en la sección 10.4) | **MVP** (clave del modo offline) |
 
 ### 3.2 Fuera del alcance
 
@@ -71,8 +85,9 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 - **Google Play:** la app no se publica en tiendas; se distribuye como APK interno (sección 10.3). Los permisos `SEND_SMS`, `RECEIVE_SMS` y `USE_FULL_SCREEN_INTENT` que se usan aquí están restringidos por las políticas de Google Play; antes de publicar habría que justificarlos o reemplazarlos.
 - **Web:** no hay versión web ni PWA. Firebase Hosting solo sirve los archivos de App Links, la página de enlaces de SMS y la política de privacidad.
 - **Expo Go:** la app usa módulos nativos (React Native Firebase, ubicación en segundo plano, mapas), así que se ejecuta con un *development build* de EAS, no con Expo Go.
-- **Pagos:** no hay cobro ni pago entre vecinos. Las horas son solo reputación; no hay saldo ni banco de tiempo (ver RN-08).
-- **Chat:** no hay mensajería entre vecinos dentro de la app (supuesto). La coordinación se hace con el mapa y los estados.
+- **Pagos y donaciones de dinero:** no hay cobros, pagos ni donaciones en dinero (ni integración con Yape/Plin). Las donaciones son solo de bienes materiales en el muro solidario. Las horas son solo reputación; no hay saldo ni banco de tiempo (ver RN-08).
+- **Chat:** no hay mensajería ni chats moderados dentro de la app. Los grupos de apoyo son fichas del directorio con un enlace a su grupo de WhatsApp (RF40); la coordinación de servicios se hace con el mapa y los estados.
+- **Verificación automática de identidad:** no se consulta RENIEC ni otra API; la verificación la marca un validador del equipo desde la consola (RF36).
 - **Navegación paso a paso:** el mapa muestra los dos puntos; para la ruta se ofrece «Abrir en Google Maps».
 - **Lectura de la bandeja de SMS:** la app solo escucha los SMS entrantes con el prefijo `VEC1:` (`RECEIVE_SMS`); no lee el historial (`READ_SMS`) ni otros mensajes.
 - **Inicio de sesión con teléfono + clave:** Firebase Auth no lo soporta. El teléfono se guarda en el perfil.
@@ -94,7 +109,7 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 
 | ID | Requerimiento | Actor | Pantalla | Fase |
 | -- | ------------- | ----- | -------- | ---- |
-| RF01 | Registrarse con nombre, correo y clave; teléfono opcional | Vecino | P02 | MVP |
+| RF01 | Registrarse con nombre, correo, teléfono y clave | Vecino | P02 | MVP |
 | RF02 | Registrarse o iniciar sesión con Google | Vecino | P01, P02 | MVP |
 | RF03 | Registrarse o iniciar sesión con Facebook | Vecino | P01, P02 | Fase 2 |
 | RF30 | Registrarse o iniciar sesión con Apple | Vecino | P01, P02 | Futuro (solo si se lanza iOS) |
@@ -131,25 +146,42 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 | RF24 | Pulsar "Estoy bien": salir del mapa y dejar de recibir alertas | Vecino | P12 | MVP |
 | RF25 | Finalizar el modo emergencia de una zona | Sistema | — (función programada) | MVP |
 
-### 4.4 Contingencia por SMS (Fase 2)
+### 4.4 Contingencia por SMS
 
 | ID | Requerimiento | Actor | Pantalla | Fase |
 | -- | ------------- | ----- | -------- | ---- |
-| RF26 | Sin internet, enviar automáticamente una alerta o necesidad cifrada por SMS al móvil intermediario | Vecino | P13 | Fase 2 |
-| RF27 | El móvil intermediario recibe el SMS, lo reenvía al backend, que lo procesa y distribuye la respuesta por internet y por SMS | Móvil intermediario, Sistema | P10 (activar modo) | Fase 2 |
-| RF28 | Recibir un SMS cifrado sin internet y que la app lo descifre y lo muestre como notificación | Vecino | P13 | Fase 2 |
+| RF26 | Sin internet, enviar automáticamente una alerta o necesidad cifrada por SMS al móvil intermediario | Vecino | P13 | MVP |
+| RF27 | El móvil intermediario recibe el SMS, lo reenvía al backend, que lo procesa y distribuye la respuesta por internet y por SMS | Móvil intermediario, Sistema | P10 (activar modo) | MVP |
+| RF28 | Recibir un SMS cifrado sin internet y que la app lo descifre y lo muestre como notificación | Vecino | P13 | MVP |
 
 ### 4.5 Temas
 
 | ID | Requerimiento | Actor | Pantalla | Fase |
 | -- | ------------- | ----- | -------- | ---- |
-| RF29 | Cambiar el tema según el clima de la ubicación (lluvia → azul noche, calor inusual → naranja) y el modo emergencia (rojo) | Sistema | Todas | MVP |
+| RF29 | Cambiar el tema según el clima de la ubicación (lluvia → azul noche, calor inusual → terracota) y el modo emergencia (rojo) | Sistema | Todas | MVP |
 
-### 4.6 Criterios de aceptación
+### 4.6 Requerimientos agregados por el reto
+
+| ID | Requerimiento | Actor | Pantalla | Fase |
+| -- | ------------- | ----- | -------- | ---- |
+| RF31 | Publicar en el directorio un oficio, servicio o producto que ofrezco, en 3 pasos | Vecino | P14 | MVP |
+| RF32 | Buscar en el directorio oficios, servicios y productos cercanos, ver su ficha y contactar (llamar o WhatsApp) | Vecino | P15, P16 | MVP |
+| RF33 | Dar el «Visto Bueno Vecinal» (recomendación) a una ficha del directorio | Vecino | P16 | MVP |
+| RF34 | Publicar un trabajo rápido en la bolsa (3 pasos) y marcar «Me interesa» en los de otros | Vecino | P17, P18 | MVP |
+| RF35 | Publicar en el muro solidario una oferta (presto herramienta, dono materiales, ofrezco habilidad o movilidad) además de las necesidades | Vecino | P05 | MVP |
+| RF36 | Validar mi identidad con selfie, foto del DNI, número de DNI y nombres | Vecino, Validador | P19 | MVP |
+| RF37 | Ver un tutorial al instalar y consultar una guía de ayuda en cualquier momento | Vecino | P20 | MVP |
+| RF38 | Reportar una situación de vulnerabilidad geolocalizada (formulario rápido) | Vecino | P21 | MVP |
+| RF39 | Ver y coordinar el tablero humanitario: reportes de vulnerabilidad y recursos críticos (ofrezco / necesito agua, alimentos, medicinas, refugio, transporte, herramientas) | Vecino | P22 | MVP |
+| RF40 | Ver el directorio de servicios y grupos de apoyo para emergencias (disponible sin conexión) | Vecino | P23 | MVP |
+| RF41 | Guardar las acciones sin conexión en una bandeja de salida y sincronizarlas al volver la señal; las acciones críticas salen por SMS | Sistema | Todas | MVP |
+| RF42 | Validar que la ubicación sea real y precisa antes de publicar o alertar | Sistema | P05, P14, P21 | MVP |
+
+### 4.7 Criterios de aceptación
 
 #### Cuentas
 
-- **RF01** — Con Firebase Auth (correo/clave) mediante `@react-native-firebase/auth`. Campos: nombre (2–60 caracteres, obligatorio); correo (formato válido, único, RN-01); clave de 8–64 caracteres con al menos una letra y un número, igual a su confirmación (la política de claves se configura en Firebase Auth); teléfono opcional en formato E.164 (en Perú, `+51` + 9 dígitos que empiezan en 9), único entre perfiles. Si el correo ya existe (`auth/email-already-in-use`): «Ya existe una cuenta con ese correo. Inicia sesión». Al terminar, la sesión queda abierta, se crea `usuarios/{uid}` y se pasa a P03. Se envía el correo de verificación de Firebase; la cuenta funciona sin verificar (supuesto).
+- **RF01** — Con Firebase Auth (correo/clave) mediante `@react-native-firebase/auth`. Campos: nombre (2–60 caracteres, obligatorio); correo (formato válido, único, RN-01); clave de 8–64 caracteres con al menos una letra y un número, igual a su confirmación (la política de claves se configura en Firebase Auth); teléfono **obligatorio** en formato E.164 (en Perú, `+51` + 9 dígitos que empiezan en 9), único entre perfiles (es la identidad del vecino en los SMS). Los que entran con Google o enlace mágico lo completan en P03. Si el correo ya existe (`auth/email-already-in-use`): «Ya existe una cuenta con ese correo. Inicia sesión». Al terminar, la sesión queda abierta, se crea `usuarios/{uid}` y se pasa a P03. Se envía el correo de verificación de Firebase; la cuenta funciona sin verificar (supuesto).
 - **RF02** — Con el inicio de sesión nativo de Google (`@react-native-google-signin/google-signin`), cuyo token se cambia por una credencial de Firebase. Las huellas SHA-1 y SHA-256 del certificado de firma de EAS deben estar registradas en la app Android de Firebase. Si el correo ya tiene una cuenta con otro método, se vinculan (`linkWithCredential`); si no, se crea la cuenta con el nombre, correo y foto de Google y se pasa a P03. Si el usuario cancela, vuelve a P01 sin mensaje de error.
 - **RF03** — Igual que RF02, con `react-native-fbsdk-next`.
 - **RF30** — (Fuera de la hackatón; solo si se lanza iOS). Con `expo-apple-authentication`, solo visible en iOS. Obligatorio en App Store cuando hay login con Google o Facebook (norma 4.8). Apple puede ocultar el correo (relay de Apple); en ese caso se usa ese correo. Apple solo entrega el nombre la primera vez: se guarda en ese momento o se pide en P03.
@@ -177,14 +209,14 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 
 #### Emergencia
 
-- **RF20** — Un botón rojo flotante «Emergencia» en todas las pantallas. Requiere mantenerlo pulsado 2 s con vibración de confirmación (`expo-haptics`) y luego confirmar «¿Necesitas ayuda?». La función `registrarAlerta` guarda la alerta con la ubicación; la función calcula la celda H3 (RN-11). Un vecino cuenta como máximo una vez por celda en la ventana de 10 min (RN-12). Sin internet se ofrece RF26 (Fase 2).
+- **RF20** — Un botón rojo flotante «Emergencia» en todas las pantallas. Requiere mantenerlo pulsado 2 s con vibración de confirmación (`expo-haptics`) y luego confirmar «¿Necesitas ayuda?». La función `registrarAlerta` guarda la alerta con la ubicación; la función calcula la celda H3 (RN-11). Un vecino cuenta como máximo una vez por celda en la ventana de 10 min (RN-12). Sin internet se ofrece RF26.
 - **RF21** — Al crearse una alerta, un trigger de Firestore recalcula la celda: si se cumple RN-11, crea `emergencias/{id}` `ACTIVA` sobre la celda y sus 6 vecinas (k = 1) y crea `emergencias/{id}/vecinos/{uid}` para cada vecino activo de la zona. Las apps escuchan `emergencias` que contengan su celda y entran en modo emergencia en ≤ 10 s; además se envía un push de alta prioridad.
 - **RF22** — En modo emergencia, P04 se reemplaza por P11: mapa de la zona con un marcador para cada vecino `NECESITA_AYUDA` o `SIN_RESPONDER` (nombre, tiempo desde la alerta). Solo se ven los vecinos de la zona. El tema cambia a rojo (RF29). Las necesidades en curso no se cancelan, pero la publicación de nuevas queda deshabilitada mientras dure el modo (supuesto).
 - **RF23** — Cada 60 s la función programada `cadaMinuto` envía un push FCM **solo de datos y de prioridad alta** a cada vecino de la zona en estado `SIN_RESPONDER` o `NECESITA_AYUDA`. Al recibirlo, la app (incluso cerrada) muestra una notificación del canal «Emergencias» (importancia máxima, sonido y vibración propios) con **full-screen intent**: si el teléfono está bloqueado o la pantalla apagada, se enciende y abre P12 a pantalla completa sobre la pantalla de bloqueo; si está en uso, aparece como aviso flotante. Al instalar la app se verifica el permiso de pantalla completa (`canUseFullScreenIntent()` en Android 14+); si falta, P03 lleva a los ajustes para activarlo. La notificación también trae las acciones «Estoy bien» y «Necesito ayuda», que se pueden pulsar sin abrir la app.
 - **RF24** — «Estoy bien» (desde P12 o desde la acción de la notificación) pasa al vecino a `A_SALVO`: desaparece del mapa de todos en ≤ 5 s y deja de recibir alertas periódicas, pero sigue viendo el mapa. Puede volver a `NECESITA_AYUDA` con el botón de emergencia.
 - **RF25** — La emergencia pasa a `FINALIZADA` cuando todos los vecinos de la zona están `A_SALVO`, o cuando pasan 30 min sin alertas nuevas y no queda nadie `NECESITA_AYUDA` (supuesto). Al finalizar se notifica a la zona y la interfaz vuelve al modo normal.
 
-#### Contingencia SMS (Fase 2)
+#### Contingencia SMS
 
 - **RF26** — Si la app detecta que no hay conexión (`@react-native-community/netinfo` informa `isInternetReachable = false`), el botón de emergencia y «Publicar» envían por SMS. La app arma una carga útil compacta (tipo, usuario, latitud y longitud con 4 decimales, oficio, marca de tiempo), la cifra (RN-16), la codifica en Base64URL y **la envía directamente** con el módulo nativo `sms-nativo` (`SEND_SMS`) al número del móvil intermediario, con el cuerpo `VEC1:{payload}`. Límite: un SMS de 160 caracteres (GSM-7). Se muestra «Enviado por SMS» o el error del sistema (sin saldo, sin señal). Si el vecino negó el permiso `SEND_SMS`, se abre el compositor del sistema (`expo-sms`) con el texto listo.
 - **RF27** — El móvil intermediario ejecuta la app en «modo intermediario» (se activa en P10 con un código de administrador, supuesto). Su módulo `sms-nativo` recibe en segundo plano cada SMS con prefijo `VEC1:` (`RECEIVE_SMS`, tarea *headless*) y lo reenvía a la función invocable `procesarSms` con el número de origen. La función descifra, valida que el número coincida con el teléfono del perfil y procesa el evento igual que por internet (alerta → RF20/RF21; necesidad → RF10). Las notificaciones resultantes se envían por push y, a los vecinos sin señal reciente (última ubicación > 2 min), la función devuelve una cola de SMS que el intermediario envía con `SEND_SMS`. Para usar un intermediario externo (otra app de pasarela), queda la función HTTPS `webhookSms` con firma de secreto compartido.
@@ -193,6 +225,33 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 #### Temas
 
 - **RF29** — Prioridad: **emergencia > calor > lluvia > normal**. Al abrir la app, al volver del segundo plano y cada 30 min se llama a la función `obtenerClima`, que guarda en caché el resultado por celda H3 de resolución 6 durante 30 min. Lluvia = código de clima WMO de lluvia, llovizna o tormenta (51–67, 80–82, 95–99) o precipitación > 0,2 mm/h. Calor inusual = temperatura aparente ≥ 30 °C **o** ≥ media de las máximas de los últimos 30 días + 5 °C (supuesto). Sin datos de clima se mantiene el último tema (guardado en el dispositivo). La transición de color dura 300 ms; también cambian la barra de estado y, en Android, la barra de navegación.
+
+#### Economía local
+
+- **RF31** — Flujo de 3 pasos, cada uno en una pantalla: (1) **qué ofrezco**: tipo (oficio, servicio o producto) y categoría del catálogo (RN-03, ampliado con categorías de productos: alimentos caseros, bodega, ropa, artesanía, otros); (2) **detalle**: título (5–60 caracteres), descripción (10–280), precio referencial opcional en soles o «a convenir», horario de atención, hasta 3 fotos opcionales; (3) **confirmar**: zona (ubicación validada, RF42) y vista previa → «Publicar». Precondición: identidad enviada (RN-18). Se crea `servicios/{id}` con `activo = true`. Un vecino tiene como máximo 10 fichas activas (supuesto).
+- **RF32** — Lista y mapa de fichas en un radio de 3 km, con buscador por texto y filtro por tipo y categoría. Orden: (1) número de Visto Bueno de vecinos de mi zona, (2) distancia, (3) fecha. La ficha muestra nombre y foto del vecino, insignia de identidad verificada, Vistos Buenos (número y los 3 últimos comentarios), horas ayudadas, distancia y botones «Llamar» y «WhatsApp» (`Linking` a `tel:` y `https://wa.me/`). Las fichas vistas quedan en la caché de Firestore y se pueden consultar sin conexión.
+- **RF33** — En la ficha, botón «Dar Visto Bueno» con comentario opcional (hasta 140 caracteres). Solo pueden darlo vecinos con identidad enviada, cuya ubicación esté a ≤ 2 km de la ficha (misma zona) y que no sean el dueño; uno por vecino y ficha, revocable (RN-17). Un servicio `FINALIZADO` con calificación ≥ 4 de un vecino propone dar el Visto Bueno a la ficha del prestador.
+- **RF34** — Publicar un trabajo en 3 pasos: (1) oficio requerido; (2) descripción (10–280), fecha y hora, pago ofrecido (opcional) o «a convenir»; (3) ubicación y confirmar. El trabajo vence a los 7 días o al marcarlo «Cubierto». Otros vecinos pulsan «Me interesa» (uno por trabajo); el autor ve la lista de interesados con su perfil y Vistos Buenos y los contacta por llamada o WhatsApp. La lista de trabajos cercanos se ordena como RF09 (primero los de mis oficios).
+
+#### Economía solidaria
+
+- **RF35** — El muro (P04) mezcla **necesidades** («Necesito…») y **ofertas** («Ofrezco…») con los tipos: favor u oficio, préstamo de herramienta, donación de materiales, intercambio de habilidades y movilidad solidaria. Una oferta sigue el mismo ciclo que una necesidad (sección 5.1), con los roles invertidos: quien la acepta es el que recibe. Las ofertas de préstamo indican fecha de devolución, y al finalizar el servicio se registra la devolución. Filtro por tipo arriba del muro.
+
+#### Identidad y onboarding
+
+- **RF36** — Pantalla «Verifica tu identidad» desde P03 o el perfil: número de DNI (8 dígitos, único entre perfiles), nombres y apellidos tal como en el DNI, foto del DNI (anverso) y una selfie tomada en el momento con la cámara (`expo-image-picker` con cámara, sin galería). Las fotos van a Storage en una ruta privada que solo leen el dueño y los validadores. Estado: `NO_ENVIADA` → `PENDIENTE` → `VERIFICADA` o `RECHAZADA` (con motivo). Un validador (usuario con el *custom claim* `validador`) revisa desde la consola de Firebase o desde una pantalla oculta de validación (supuesto). La insignia «Identidad verificada» aparece en perfil, fichas y tarjetas. Si se rechaza, el vecino puede reenviar.
+- **RF37** — Al instalar, 4 pantallas de tutorial con ilustraciones y texto de lectura fácil (qué es, cómo pedir ayuda, cómo ofrecer, qué hacer en una emergencia), con «Saltar». La guía de ayuda (P20) se abre desde el perfil y desde un botón «?» en P04, funciona sin conexión y tiene un botón para escuchar el texto (`expo-speech`, supuesto).
+
+#### Emergencia ampliada
+
+- **RF38** — Botón «Reportar vulnerabilidad» en P11 y en P04: tipo (persona herida, adulto mayor o persona con discapacidad sola, niños solos, sin agua o alimentos, vivienda dañada, otro), número de personas (1–99), nota opcional (≤ 60 caracteres), foto opcional (solo con internet) y ubicación validada (RF42). Se puede reportar a otra persona (el pin se mueve). Sin internet se envía por SMS (tipo `V`, sección 10.4). Estados del reporte: `ABIERTO` → `EN_ATENCION` (alguien pulsa «Voy a ayudar») → `RESUELTO`.
+- **RF39** — Tablero humanitario (P22), visible siempre pero destacado en modo emergencia: mapa y lista de reportes de vulnerabilidad abiertos y de recursos críticos («Ofrezco» / «Necesito»: agua, alimentos, medicinas, refugio, transporte, herramientas, energía o carga de celulares) con cantidad y ubicación. «Voy a ayudar» / «Lo tengo» asigna al vecino y avisa al autor. Los recursos críticos también se publican y aceptan por SMS (tipo `R`).
+- **RF40** — Directorio de emergencia (P23): fichas de servicios y grupos de apoyo (bomberos, serenazgo, comisaría, centros de salud, brigadas vecinales, ollas comunes, grupos de WhatsApp del barrio) con teléfono, dirección, horario y enlace a WhatsApp. Lo cargan los validadores; los vecinos pueden proponer fichas que quedan pendientes de aprobación. Se descarga entero al abrir la app y funciona sin conexión.
+
+#### Offline y ubicación
+
+- **RF41** — Toda escritura pasa por una **bandeja de salida** local (`bandeja.ts`). Con internet, se envía al instante. Sin internet: (a) las acciones con tipo SMS (sección 10.4) se envían por SMS al intermediario y se marcan «Enviado por SMS»; (b) el resto se guarda y la app muestra «Pendiente de enviar ({n})». Al volver la señal, la bandeja se vacía en orden y avisa los fallos (p. ej., «Otro vecino ya aceptó esta necesidad»). La persistencia offline de Firestore cubre las lecturas.
+- **RF42** — Antes de publicar (necesidad, oferta, ficha, trabajo, reporte) o de enviar una alerta, la app pide una ubicación fresca (≤ 2 min) con precisión ≤ 100 m. Si la ubicación es simulada (`mocked = true` en Android), se rechaza: «Detectamos una ubicación simulada. Desactívala para continuar». Si la precisión es peor, se ofrece reintentar o mover el pin a mano (el registro guarda `ubicacionManual = true`).
 
 ## 5. Reglas de negocio
 
@@ -214,6 +273,10 @@ Convenciones: `RF01` requerimiento funcional, `RN-01` regla de negocio, `RNF01` 
 | RN-14 | La ubicación exacta del solicitante solo la ve el prestador que aceptó; la del prestador, solo el solicitante y solo entre `ACEPTADA` y `EN_SITIO`. Los demás ven la distancia redondeada a 100 m. En emergencia, los vecinos de la zona ven a quienes están `NECESITA_AYUDA` o `SIN_RESPONDER`. | Reglas de Firestore (subcolección `privado`) |
 | RN-15 | La calificación y las horas de un vecino solo cambian por servicios `FINALIZADO`; las necesidades canceladas o expiradas no suman nada. | Función |
 | RN-16 | Los mensajes por SMS van cifrados con AES-GCM y una clave por usuario (generada en el dispositivo al activar la contingencia, guardada en `expo-secure-store` y en `usuarios/{uid}/privado/claves`); llevan marca de tiempo y el backend rechaza mensajes de más de 30 min o repetidos. | Función + app |
+| RN-17 | Un vecino da como máximo un Visto Bueno por ficha, no a sus propias fichas, y solo si su última ubicación está a ≤ 2 km de la ficha. El contador `vistosBuenos` se deriva de la subcolección. | Reglas de Firestore + trigger (contador) |
+| RN-18 | Para publicar en el directorio o la bolsa, o para aceptar una necesidad u oferta, la identidad debe estar al menos `PENDIENTE` (enviada). La insignia solo aparece con `VERIFICADA`. Pedir ayuda y usar la emergencia nunca requieren identidad. | Funciones + reglas |
+| RN-19 | El teléfono del perfil es la identidad en los SMS: un SMS cuyo número de origen no coincide con un perfil se descarta. Máximo 20 SMS por vecino por hora (los de emergencia no tienen límite). | Función `procesarSms` |
+| RN-20 | Si el mismo evento llega por SMS y luego por internet (bandeja de salida), se procesa una sola vez (id de mensaje único). | Función (`smsProcesados` / id de acción) |
 
 **Conceptos derivados** (se calculan a partir del estado):
 
@@ -300,7 +363,7 @@ stateDiagram-v2
 | --------- | ------------------ | --- | ------- |
 | `usuarios/{uid}` | `nombre`, `correo`, `telefono`, `oficios[]`, `fotoUrl`, `geohash`, `celdaH3`, `ubicacionEn`, `necesidadActivaId`, `servicioActivoId` | Dueño | Dueño (perfil y ubicación); funciones (`celdaH3`, punteros) |
 | `usuarios/{uid}/dispositivos/{tokenFcm}` | `plataforma` (`android`), `creadoEn` | Dueño | Dueño |
-| `usuarios/{uid}/privado/claves` | Clave SMS (Fase 2) | Dueño, funciones | Dueño |
+| `usuarios/{uid}/privado/claves` | Clave SMS | Dueño, funciones | Dueño |
 | `perfiles/{uid}` | `nombre`, `fotoUrl`, `oficios[]`, `horasAyudadas`, `horasSolicitadas`, `promedio`, `numCalificaciones` | Vecinos autenticados | Funciones (contadores); dueño (nombre, foto, oficios) |
 | `telefonos/{e164}` | `uid` | Nadie (app) | Funciones |
 | `oficios/{id}` | `nombre`, `icono`, `orden` | Todos | Consola |
@@ -311,8 +374,16 @@ stateDiagram-v2
 | `alertas/{id}` | `uid`, `celdaH3`, `lat`, `lng`, `canal` (`APP`/`SMS`), `emergenciaId`, `creadoEn` | Funciones | Funciones |
 | `emergencias/{id}` | `celdaCentro`, `celdas[]`, `estado`, `activadaEn`, `ultimaAlertaEn`, `finalizadaEn` | Vecinos de la zona | Funciones |
 | `emergencias/{id}/vecinos/{uid}` | `nombre`, `estado`, `lat`, `lng`, `ultimaAlertaEn` | Vecinos de la zona | Funciones (el vecino cambia su `estado` llamando a una función) |
-| `intermediarios/{uid}` | `telefono`, `celdasCubiertas[]`, `activo`, `ultimaSenalEn` (Fase 2) | Funciones | Funciones |
-| `smsProcesados/{hash}` | `creadoEn` (anti-replay, TTL de 1 h) (Fase 2) | Funciones | Funciones |
+| `intermediarios/{uid}` | `telefono`, `celdasCubiertas[]`, `activo`, `ultimaSenalEn` | Funciones | Funciones |
+| `smsProcesados/{hash}` | `creadoEn` (anti-replay, TTL de 1 h) | Funciones | Funciones |
+| `servicios/{id}` | `duenoId`, `tipo` (`OFICIO`/`SERVICIO`/`PRODUCTO`), `categoria`, `titulo`, `descripcion`, `precio`, `horario`, `fotos[]`, `geohash`, `vistosBuenos`, `activo` | Vecinos autenticados | Dueño (RF31) |
+| `servicios/{id}/vistosBuenos/{uid}` | `comentario`, `creadoEn` | Vecinos autenticados | Autor (RN-17) |
+| `trabajos/{id}` | `autorId`, `oficioId`, `descripcion`, `fecha`, `pago`, `geohash`, `estado` (`ABIERTO`/`CUBIERTO`/`VENCIDO`), `venceEn` | Vecinos autenticados | Autor |
+| `trabajos/{id}/interesados/{uid}` | `creadoEn` | Autor del trabajo, el interesado | Interesado |
+| `verificaciones/{uid}` | `dni`, `nombres`, `apellidos`, `estado`, `motivo`, `revisadoPor` (fotos en Storage `verificaciones/{uid}/`) | Dueño, validadores | Dueño (envío), validadores (estado) |
+| `reportesVulnerabilidad/{id}` | `autorId`, `tipo`, `personas`, `nota`, `geohash`, `lat`, `lng`, `celdaH3`, `estado`, `atiendeId`, `canal` (`APP`/`SMS`) | Vecinos autenticados | Funciones |
+| `recursosCriticos/{id}` | `autorId`, `modo` (`OFREZCO`/`NECESITO`), `tipo`, `cantidad`, `geohash`, `estado`, `asignadoId`, `canal` | Vecinos autenticados | Funciones |
+| `directorioEmergencia/{id}` | `nombre`, `tipo`, `telefono`, `whatsapp`, `direccion`, `horario`, `geohash`, `aprobado` | Todos | Validadores; vecinos proponen con `aprobado = false` |
 | `climaCache/{celdaH3r6}` | `tema`, `datos`, `actualizadoEn` | Funciones | Funciones |
 | `auditoria/{id}` | `tipo`, `uid`, `refId`, `creadoEn` (sin datos sensibles) | Consola | Funciones |
 
@@ -334,7 +405,7 @@ stateDiagram-v2
 | RNF09 | Disponibilidad | Persistencia offline de Firestore activada (por defecto en React Native Firebase); sin internet la app abre, muestra los datos en caché y el aviso «Sin conexión»; si Open-Meteo falla, se mantiene el último tema; si el push falla, el estado se actualiza por el listener al abrir la app | Prueba en modo avión |
 | RNF10 | Escalabilidad | El conteo de emergencia consulta solo las alertas de la celda en los últimos 10 min (índice `celdaH3, creadoEn`) y un `count()` de usuarios activos de la celda, sin recorrer todos los usuarios | Revisión de consultas e índices |
 | RNF11 | Mantenibilidad | TypeScript estricto en la app y las funciones; pruebas de las transiciones de estado (sección 5.1), RN-09, RN-11 y de las reglas de seguridad, con cobertura ≥ 70 % en `functions/` | Reporte de cobertura en CI |
-| RNF12 | Contingencia SMS (Fase 2) | Payload ≤ 160 caracteres GSM-7; cifrado AES-GCM-128 con nonce único; mensajes de más de 30 min o repetidos se rechazan; un SMS recibido se convierte en notificación en ≤ 5 s con la app cerrada | Pruebas unitarias del codec + prueba con 2 teléfonos en modo avión con SMS activo y 1 intermediario |
+| RNF12 | Contingencia SMS | Payload ≤ 160 caracteres GSM-7; cifrado AES-GCM-128 con nonce único; mensajes de más de 30 min o repetidos se rechazan; un SMS recibido se convierte en notificación en ≤ 5 s con la app cerrada | Pruebas unitarias del codec + prueba con 2 teléfonos en modo avión con SMS activo y 1 intermediario |
 | RNF13 | Auditoría | Se registran en `auditoria`: cambios de estado de necesidades, alertas de emergencia, activación y fin de emergencias, mensajes SMS procesados (sin contenido). Los inicios de sesión los registra Firebase Auth; los cierres inesperados, Crashlytics | Revisión de la colección y de la consola |
 | RNF14 | Despliegue | Backend en Firebase (Functions, reglas, índices, Hosting) desplegado desde CI; Hosting con dominio propio y TLS automático sirve `/.well-known/assetlinks.json`, la página `/s`, la página de descarga del APK y la política de privacidad; la app se compila con EAS Build como APK de distribución interna | Revisión de la configuración + prueba de App Links (`adb shell pm get-app-links`) |
 | RNF15 | Entornos | Dos proyectos de Firebase (`dev` y `prod`) con su propio `google-services.json`, elegidos por el perfil de EAS (`development`, `preview`, `production`); desarrollo local contra Firebase Emulator Suite | Revisión de `eas.json` y `app.config.ts` |
@@ -357,7 +428,19 @@ stateDiagram-v2
 | P10 | Perfil (oficios, foto, horas, calificación, historial, activar modo intermediario) | Vecino | RF05, RF06, RF17, RF27 |
 | P11 | Mapa de emergencia | Vecino | RF22, RF24, RF25 |
 | P12 | Alerta a pantalla completa «Estoy bien» / «Necesito ayuda» | Vecino | RF23, RF24 |
-| P13 | Modo sin conexión (enviar por SMS / mensaje recibido) | Vecino | RF26, RF28 |
+| P13 | Modo sin conexión (enviar por SMS / mensaje recibido / bandeja de salida) | Vecino | RF26, RF28, RF41 |
+| P14 | Publicar en el directorio (3 pasos) | Vecino | RF31, RF42 |
+| P15 | Directorio: lista, mapa, búsqueda y filtros | Vecino | RF32 |
+| P16 | Ficha del directorio (contactar, Visto Bueno) | Vecino | RF32, RF33 |
+| P17 | Bolsa de trabajos: lista y detalle («Me interesa») | Vecino | RF34 |
+| P18 | Publicar trabajo (3 pasos) e interesados | Vecino | RF34 |
+| P19 | Verificar identidad | Vecino, Validador | RF36 |
+| P20 | Tutorial y guía de ayuda | Vecino | RF37 |
+| P21 | Reportar vulnerabilidad | Vecino | RF38, RF42 |
+| P22 | Tablero humanitario (vulnerabilidad + recursos críticos) | Vecino | RF39 |
+| P23 | Directorio de emergencia y grupos de apoyo | Vecino | RF40 |
+
+Navegación principal (pestañas inferiores): **Muro** (P04) · **Directorio** (P15) · **Trabajos** (P17) · **Emergencia** (P22/P11) · **Perfil** (P10). El botón de emergencia flota sobre todas.
 
 ```mermaid
 flowchart LR
@@ -378,22 +461,24 @@ flowchart LR
 
 Los temas se definen como objetos de tokens en TypeScript (`temas.ts`) y se aplican con un proveedor de tema (`ThemeProvider` + hook `useTema()`); cambiar de tema no reinicia la app. Prioridad: **emergencia > calor > lluvia > normal** (RF29). Con cada tema se ajustan la barra de estado (`expo-status-bar`) y la barra de navegación (`expo-navigation-bar`).
 
-| Token | Normal (comunidad) | Lluvia (azul noche) | Calor (naranja) | Emergencia (rojo) |
-| ----- | ------------------ | ------------------- | --------------- | ----------------- |
-| `fondo` | `#F6F8F5` | `#0F1B2D` | `#FFF4E8` | `#FFF1F1` |
+La identidad visual es **naranja dominante** (acción, rescate, energía y cercanía) con **neutros cálidos** para alta accesibilidad.
+
+| Token | Normal (naranja de marca) | Lluvia (azul noche) | Calor (terracota) | Emergencia (rojo) |
+| ----- | ------------------------- | ------------------- | ----------------- | ----------------- |
+| `fondo` | `#FAFAF9` | `#0F1B2D` | `#FDF0E6` | `#FFF1F1` |
 | `superficie` | `#FFFFFF` | `#172A45` | `#FFFFFF` | `#FFFFFF` |
-| `primario` | `#2E7D5B` | `#4F8DF5` | `#C2410C` | `#C62828` |
-| `primarioOscuro` | `#1F5A41` | `#2C5BB8` | `#9A3412` | `#8E1B1B` |
+| `primario` | `#C2410C` | `#4F8DF5` | `#9C3D1B` | `#C62828` |
+| `primarioOscuro` | `#9A3412` | `#2C5BB8` | `#6F2A12` | `#8E1B1B` |
 | `sobrePrimario` | `#FFFFFF` | `#0F1B2D` | `#FFFFFF` | `#FFFFFF` |
-| `acento` | `#F2B33D` | `#7FD1F7` | `#FDBA74` | `#FFD54F` |
-| `texto` | `#1B2A22` | `#E6EEF8` | `#3B1D0A` | `#2B0B0B` |
-| `textoSecundario` | `#55665C` | `#9FB3CC` | `#7C4A2A` | `#6B2B2B` |
-| `borde` | `#D7DED9` | `#2A3F5F` | `#F5D3B3` | `#F3C1C1` |
+| `acento` | `#FB923C` | `#7FD1F7` | `#F59E0B` | `#FFD54F` |
+| `texto` | `#1C1917` | `#E6EEF8` | `#2A140A` | `#2B0B0B` |
+| `textoSecundario` | `#57534E` | `#9FB3CC` | `#6B3A22` | `#6B2B2B` |
+| `borde` | `#E7E5E4` | `#2A3F5F` | `#F1CFB5` | `#F3C1C1` |
 | `alertaFondo` (P12) | — | — | — | `#B71C1C` con texto `#FFFFFF` |
 | Barra de estado | oscura | clara | oscura | oscura (clara en P12) |
 | Icono en la barra superior | — | 🌧 lluvia | 🌡 calor | ⚠ emergencia |
 
-El botón flotante de emergencia usa `#C62828` en todos los temas, salvo en lluvia, que usa `#FF5A5F` para mantener el contraste sobre el fondo oscuro. El estilo del mapa (`customMapStyle`) pasa a oscuro con el tema de lluvia. Los contrastes se validan según RNF03 antes de la entrega.
+El naranja `#C2410C` se usa para botones y texto sobre blanco (contraste 5,2:1); el naranja claro `#FB923C` solo para fondos, iconos e ilustraciones, nunca para texto. El botón flotante de emergencia usa `#C62828` en todos los temas (se distingue del naranja por forma e icono ⚠), salvo en lluvia, que usa `#FF5A5F` para mantener el contraste sobre el fondo oscuro. El estilo del mapa (`customMapStyle`) pasa a oscuro con el tema de lluvia. Los contrastes se validan según RNF03 antes de la entrega.
 
 ## 9. Stack tecnológico
 
@@ -416,8 +501,8 @@ El botón flotante de emergencia usa `#C62828` en todos los temas, salvo en lluv
 | Estilos | `StyleSheet` + tokens de tema (sección 8) | Los 4 temas |
 | Imágenes | **expo-image-picker**, **expo-image-manipulator**, **expo-image** | RF06 |
 | Conectividad | **@react-native-community/netinfo** | Detección de sin conexión (RF26) |
-| SMS (Fase 2) | Módulo nativo propio **`sms-nativo`** (Expo Modules API, Kotlin): envío con `SmsManager` y recepción con un `BroadcastReceiver` de `SMS_RECEIVED` que lanza una tarea *headless* de JS; **expo-sms** como respaldo (compositor) | RF26–RF28 |
-| Cifrado (Fase 2) | **@noble/ciphers** (AES-GCM) + **expo-crypto** (bytes aleatorios) + **expo-secure-store** (clave) | RN-16 |
+| SMS | Módulo nativo propio **`sms-nativo`** (Expo Modules API, Kotlin): envío con `SmsManager` y recepción con un `BroadcastReceiver` de `SMS_RECEIVED` que lanza una tarea *headless* de JS; **expo-sms** como respaldo (compositor) | RF26–RF28 |
+| Cifrado | **@noble/ciphers** (AES-GCM) + **expo-crypto** (bytes aleatorios) + **expo-secure-store** (clave) | RN-16 |
 | Otros | **expo-haptics**, **expo-status-bar**, **expo-navigation-bar**, **expo-linking**, **date-fns** (locale `es`) | Botón de emergencia, temas, enlaces, fechas |
 
 ### 9.2 Backend (Firebase)
@@ -433,7 +518,7 @@ El botón flotante de emergencia usa `#C62828` en todos los temas, salvo en lluv
 | **Firebase Hosting** | Dominio de App Links, página `/s`, página de descarga del APK, política de privacidad | RF04, RF28, RNF14 |
 | **App Check** | Play Integrity en modo monitoreo (no se exige con APK interno); proveedor de depuración en desarrollo | RNF04 |
 | **Crashlytics** | Reporte de cierres inesperados | RNF13 |
-| **Secret Manager** | Código de activación del modo intermediario y secreto del webhook externo opcional (Fase 2) | RF27 |
+| **Secret Manager** | Código de activación del modo intermediario y secreto del webhook externo opcional | RF27 |
 | **Región** | `southamerica-east1` (São Paulo) para Firestore y Functions (supuesto: la más cercana a Perú) | RNF06 |
 
 ### 9.3 Externos
@@ -442,7 +527,7 @@ El botón flotante de emergencia usa `#C62828` en todos los temas, salvo en lluv
 | -------- | --- |
 | **Open-Meteo** | Clima actual e histórico de 30 días, sin clave (RF29) |
 | **Google Maps SDK for Android** | Mapa (requiere clave de API restringida a la app) |
-| **Operador móvil** (Fase 2) | SMS entre los vecinos y el móvil intermediario (plan con SMS en el chip del intermediario) |
+| **Operador móvil** | SMS entre los vecinos y el móvil intermediario (plan con SMS en el chip del intermediario) |
 
 ### 9.4 Calidad y entrega
 
@@ -455,39 +540,128 @@ El botón flotante de emergencia usa `#C62828` en todos los temas, salvo en lluv
 | CI/CD | GitHub Actions: lint + pruebas en cada PR; `firebase deploy` del backend al hacer merge a `main`; EAS Build/Update disparados desde CI (`eas build --platform android --profile preview`, `eas update --channel preview`) |
 | Monitoreo | Crashlytics (app), Cloud Logging (funciones) |
 
-### 9.5 Estructura del repositorio (propuesta)
+### 9.5 Estructura del repositorio
+
+Monorepo con 4 paquetes. Dentro de la app se organiza **por módulos de negocio** (estilo DDD liviano, tomando como referencia la organización por *features*). Cada módulo es dueño de sus pantallas, su lógica, su acceso a datos y sus mensajes SMS. Los nombres van en español, salvo las carpetas cuyo nombre exige una herramienta (`app/` de Expo Router, `modules/` de los módulos nativos de Expo, `functions/` de Firebase).
 
 ```text
 /
-├── app/                    # App Expo (React Native)
-│   ├── app/                # rutas de Expo Router (P01–P13)
+├── movil/                          # App Expo (React Native)
 │   ├── src/
-│   │   ├── componentes/
-│   │   ├── firebase/       # auth, firestore, functions, messaging, app-check
-│   │   ├── ubicacion/      # tarea en segundo plano (expo-task-manager)
-│   │   ├── notificaciones/ # canales, full-screen intent, acciones (Notifee)
-│   │   ├── temas/          # tokens de la sección 8 + ThemeProvider
-│   │   └── sms/            # codec, cifrado y modo intermediario (Fase 2)
+│   │   ├── app/                    # RUTAS de Expo Router: archivos delgados que solo importan pantallas
+│   │   │   ├── _layout.tsx         # proveedores: tema, sesión, bandeja de salida, notificaciones
+│   │   │   ├── (publico)/          # sin sesión
+│   │   │   │   ├── bienvenida.tsx          → bienvenida (P20)
+│   │   │   │   ├── ingresar.tsx            → cuentas (P01)
+│   │   │   │   └── registro.tsx            → cuentas (P02)
+│   │   │   ├── (privado)/          # con sesión
+│   │   │   │   ├── completar-perfil.tsx    → cuentas (P03)
+│   │   │   │   ├── verificar-identidad.tsx → identidad (P19)
+│   │   │   │   ├── (pestanas)/
+│   │   │   │   │   ├── _layout.tsx         # pestañas + botón de emergencia flotante
+│   │   │   │   │   ├── favores/            → favores (P04–P09)
+│   │   │   │   │   ├── directorio/         → directorio (P14–P16)
+│   │   │   │   │   ├── trabajos/           → trabajos (P17–P18)
+│   │   │   │   │   ├── emergencia/         → ayuda-humanitaria (P11, P21–P23)
+│   │   │   │   │   └── perfil/             → cuentas (P10), contingencia-sms (modo intermediario)
+│   │   │   │   └── alerta.tsx              → emergencia (P12, modal a pantalla completa)
+│   │   │   └── s.tsx               # App Link de los SMS → contingencia-sms (P13)
+│   │   │
+│   │   ├── modulos/                # MÓDULOS DE NEGOCIO (uno por funcionalidad)
+│   │   │   ├── cuentas/            # registro, ingreso, perfil, oficios
+│   │   │   ├── identidad/          # verificación con DNI y selfie
+│   │   │   ├── bienvenida/         # tutorial y guía de ayuda
+│   │   │   ├── directorio/         # oficios, servicios, productos, Visto Bueno Vecinal
+│   │   │   ├── trabajos/           # bolsa de trabajos rápidos
+│   │   │   ├── favores/            # muro solidario y ciclo del servicio
+│   │   │   ├── emergencia/         # botón, activación por zona, alerta, «Estoy bien»
+│   │   │   ├── ayuda-humanitaria/  # mapa de emergencia, vulnerabilidad, recursos críticos, directorio de apoyo
+│   │   │   └── contingencia-sms/   # transporte SMS, receptor, modo intermediario
+│   │   │
+│   │   ├── nucleo/                 # INFRAESTRUCTURA sin pantallas (la usan todos los módulos)
+│   │   │   ├── firebase/           # inicialización, App Check, emuladores
+│   │   │   ├── sesion/             # usuario actual, perfil en memoria
+│   │   │   ├── bandeja-salida/     # enviarAccion(): internet → SMS → cola (RF41)
+│   │   │   ├── ubicacion/          # useUbicacionValidada(), tarea en segundo plano (RF42)
+│   │   │   ├── notificaciones/     # FCM, canales de Notifee, manejador en segundo plano
+│   │   │   ├── red/                # estado de conexión (NetInfo)
+│   │   │   └── clima/              # obtenerClima y cálculo del tema (RF29)
+│   │   │
+│   │   ├── compartido/             # PIEZAS REUTILIZABLES sin lógica de negocio
+│   │   │   ├── ui/                 # Boton, Tarjeta, Campo, ListaVacia, Insignia, MapaBase, AsistentePasos
+│   │   │   ├── tema/               # tokens de la sección 8, ThemeProvider, useTema()
+│   │   │   ├── hooks/              # useDebounce, useIntervalo…
+│   │   │   ├── utilidades/         # fechas, distancias, formatos
+│   │   │   └── constantes/         # catálogos (oficios, tipos de favor, tipos de vulnerabilidad)
+│   │   │
+│   │   ├── recursos/               # imágenes, ilustraciones del tutorial, sonidos de alerta
+│   │   └── simulaciones/           # mocks para trabajar sin depender de otro módulo
+│   │
 │   ├── modules/
-│   │   └── sms-nativo/     # módulo Expo en Kotlin: SmsManager + BroadcastReceiver (Fase 2)
-│   ├── app.config.ts       # permisos Android, plugins, App Links, perfiles
-│   └── eas.json            # perfiles development / preview / production (APK)
-├── functions/              # Cloud Functions (TypeScript)
+│   │   └── sms-nativo/             # módulo Expo en Kotlin (SmsManager + BroadcastReceiver)
+│   ├── app.config.ts
+│   └── eas.json
+│
+├── functions/                      # Cloud Functions (mismos nombres de módulo que la app)
 │   └── src/
-│       ├── necesidades/    # publicar, aceptar, llegada, fin, cancelar
-│       ├── emergencia/     # registrarAlerta, trigger de umbral, estoyBien
-│       ├── programadas/    # cadaMinuto
-│       ├── clima/          # obtenerClima
-│       └── sms/            # procesarSms, webhookSms (Fase 2)
-├── hosting/
-│   └── public/             # .well-known/assetlinks.json, /s, descarga del APK, privacidad
-├── shared/                 # esquemas Zod y tipos compartidos
-├── firestore.rules
-├── firestore.indexes.json
-├── storage.rules
-├── firebase.json           # Hosting, cabeceras, emuladores
+│       ├── index.ts                # solo exporta las funciones de cada módulo
+│       ├── modulos/
+│       │   ├── cuentas/ · identidad/ · directorio/ · trabajos/ · favores/
+│       │   ├── emergencia/ · ayuda-humanitaria/ · contingencia-sms/ · clima/
+│       ├── programadas/
+│       │   └── cadaMinuto.ts       # orquesta las tareas que registra cada módulo
+│       └── nucleo/                 # admin SDK, notificar(), h3, validación con Zod, auditoría
+│
+├── compartido/                     # Paquete npm usado por la app y las funciones
+│   └── src/
+│       ├── modelos/                # tipos de cada colección (sección 5.4)
+│       ├── esquemas/               # esquemas Zod de entrada de cada función
+│       └── sms/                    # protocolo SMS (sección 10.4): cifrado, codec y registro de tipos
+│
+├── hosting/public/                 # .well-known/assetlinks.json, /s, descarga del APK, privacidad
+├── firestore.rules · firestore.indexes.json · storage.rules · firebase.json
 └── .github/workflows/
 ```
+
+#### Estructura interna de cada módulo
+
+Todos los módulos de `movil/src/modulos/` siguen el mismo esqueleto. Si una carpeta no se necesita, no se crea.
+
+```text
+modulos/favores/
+├── index.ts            # API PÚBLICA: lo único que otros módulos pueden importar
+├── tipos.ts            # tipos del módulo (re-exporta los modelos de compartido/)
+├── reglas.ts           # reglas de negocio puras y testeables (p. ej., calcularBloques, RN-09)
+├── servicios/          # acceso a datos: consultas de Firestore y llamadas a funciones
+│   ├── necesidadesRepositorio.ts
+│   └── servicioApi.ts
+├── hooks/              # estado de pantalla: useMuro(), useServicioEnCurso()
+├── componentes/        # componentes propios: TarjetaNecesidad, SelectorEta, Cronometro
+├── pantallas/          # pantallas completas: MuroPantalla, PublicarPantalla, DetallePantalla…
+├── sms/                # codecs de sus tipos SMS (N, A, L, C, F, X, NV, ES) y su manejador de recepción
+└── __tests__/          # pruebas de reglas.ts y de los codecs
+```
+
+En `functions/src/modulos/<modulo>/` el esqueleto equivalente es `invocables.ts` (funciones llamadas por la app), `disparadores.ts` (triggers de Firestore), `programadas.ts` (tareas que se registran en `cadaMinuto`), `sms.ts` (manejador para `procesarSms`), `reglas.ts` y `__tests__/`.
+
+#### Reglas de dependencia
+
+```mermaid
+flowchart TD
+    APP["src/app (rutas)"] --> MOD["modulos/*"]
+    MOD --> NUC["nucleo/*"]
+    MOD --> COMP["compartido/* (ui, tema, utilidades)"]
+    NUC --> COMP
+    MOD --> PKG["paquete compartido (modelos, esquemas, sms)"]
+    NUC --> PKG
+    MOD -. "solo vía index.ts" .-> MOD
+```
+
+1. `src/app/` no tiene lógica: cada archivo de ruta importa una pantalla del módulo y la exporta.
+2. Un módulo **no importa archivos internos de otro módulo**, solo su `index.ts` (p. ej., `emergencia` usa `TableroHumanitario` desde `ayuda-humanitaria/index.ts`). Se verifica con la regla `import/no-restricted-paths` de ESLint.
+3. `nucleo/` y `compartido/` nunca importan desde `modulos/`.
+4. Las pantallas no llaman a Firestore directamente: pasan por `servicios/`, y toda escritura pasa por la bandeja de salida (`nucleo/bandeja-salida`).
+5. Cada módulo registra sus tipos SMS en el protocolo de `compartido/src/sms/` y su manejador en `functions/src/modulos/<modulo>/sms.ts`.
 
 ## 10. Arquitectura y despliegue
 
@@ -519,11 +693,11 @@ flowchart TB
         FS[("Cloud Firestore<br/>datos + tiempo real")]
         ST[("Cloud Storage<br/>fotos")]
         subgraph FN["Cloud Functions"]
-            FNEC["necesidades/*<br/>invocables + transacciones"]
+            FNEC["favores/*<br/>invocables + transacciones"]
             FEMG["emergencia/*<br/>registrarAlerta + trigger umbral"]
             FCRON["cadaMinuto<br/>programada"]
             FCLIMA["obtenerClima"]
-            FSMS["procesarSms (Fase 2)"]
+            FSMS["procesarSms"]
         end
         FCM["Firebase Cloud Messaging"]
         HOST["Firebase Hosting<br/>App Links · /s · APK · privacidad"]
@@ -561,14 +735,14 @@ flowchart TB
 | App Expo | Interfaz, permisos, temas, mapas, detección de conexión, enlaces profundos | Todos |
 | Tarea en segundo plano | Envío de la ubicación del prestador con la app cerrada | RF13 |
 | Notifee | Canal «Emergencias», full-screen intent, acciones «Estoy bien» / «Necesito ayuda», notificaciones locales de SMS | RF23, RF24, RF28 |
-| Módulo `sms-nativo` (Fase 2) | Envío y recepción de SMS `VEC1:` en segundo plano | RF26, RF27, RF28 |
+| Módulo `sms-nativo` | Envío y recepción de SMS `VEC1:` en segundo plano | RF26, RF27, RF28 |
 | Firebase Auth | Registro, login, proveedores de identidad, enlaces mágicos, recuperación de clave | RF01–RF04, RF07 |
 | Firestore + reglas | Datos, tiempo real, control de lectura (RN-13, RN-14) | Todos |
-| `necesidades/*` | Máquina de estados en transacciones, bloques, contadores, calificaciones | RF10–RF18 |
+| `favores/*` | Máquina de estados en transacciones, bloques, contadores, calificaciones | RF10–RF18 |
 | `emergencia/*` | Registro de alertas, celdas H3, conteo, activación, "Estoy bien" | RF20, RF21, RF22, RF24 |
 | `cadaMinuto` | Expiración, retrasos, alertas cada minuto, cierre de emergencias y servicios | RF19, RF23, RF25, RN-10 |
 | `obtenerClima` | Consulta y caché del clima, cálculo del tema | RF29 |
-| `procesarSms` (Fase 2) | Descifrado, anti-replay, procesamiento del evento y cola de SMS de respuesta para el intermediario | RF26–RF28 |
+| `procesarSms` | Descifrado, anti-replay, procesamiento del evento y cola de SMS de respuesta para el intermediario | RF26–RF28 |
 | Hosting | `assetlinks.json`, página `/s`, descarga del APK, política de privacidad | RF04, RF28 |
 
 ### 10.3 Despliegue y HTTPS
@@ -594,6 +768,51 @@ flowchart LR
 - **Instalación:** EAS entrega un enlace y un QR por build; Hosting publica una página de descarga con el último APK de producción. Las actualizaciones de solo JavaScript llegan por EAS Update sin reinstalar.
 - **Credenciales:** el keystore de Android lo administra EAS; sus huellas SHA-1 y SHA-256 se registran en Firebase (Google Sign-In, App Links) y en la restricción de la clave de Google Maps. Si se pierde el keystore, los teléfonos tendrían que desinstalar e instalar de nuevo. El despliegue a Firebase desde GitHub Actions usa Workload Identity Federation (sin claves JSON en el repo).
 - **Actualizaciones:** los cambios de JavaScript se publican con EAS Update en el canal del perfil; cualquier cambio de dependencias nativas, permisos o plugins requiere un build nuevo (RNF17).
+
+### 10.4 Protocolo SMS (contrato compartido)
+
+El SMS es el transporte de respaldo de las acciones críticas cuando no hay internet. Este protocolo es el contrato entre la app, el móvil intermediario y la función `procesarSms`; vive en `shared/sms/` y **cada dueño de funcionalidad agrega y prueba sus propios tipos de mensaje**.
+
+**Formato del SMS:** `VEC1:` + Base64URL( nonce 12 B ‖ AES-GCM( texto ) ‖ tag 16 B ).
+
+- Como máximo **2 segmentos** (≤ 306 caracteres GSM-7), lo que deja ~195 bytes de texto plano; los mensajes de emergencia deben caber en **1 segmento** (~88 bytes).
+- Texto plano: campos separados por `|`, con este encabezado: `tipo|idMsg|ts|…campos`.
+  - `idMsg`: 6 caracteres base36 aleatorios (para deduplicar y acusar recibo).
+  - `ts`: segundos desde 2026-01-01 en base36.
+  - Coordenadas: `lat` y `lng` con 4 decimales, multiplicadas por 10⁴ y en base36.
+- Las necesidades, emergencias, reportes y recursos tienen un `codigo` corto de 6 caracteres (además del id de Firestore) para poder citarlos por SMS.
+- Clave: la del vecino (RN-16). Se genera y se sube al servidor **la primera vez que hay internet**; sin ese paso el vecino no puede usar SMS (la app lo avisa en P13).
+
+**Subida (vecino → intermediario → `procesarSms`):**
+
+| Tipo | Acción | Campos | Dueño |
+| ---- | ------ | ------ | ----- |
+| `E` | Alerta de emergencia (RF20) | `lat`, `lng` | Persona D |
+| `K` | «Estoy bien» / «Necesito ayuda» (RF24) | `codigoEmergencia`, `estado` (`B`/`A`) | Persona D |
+| `V` | Reporte de vulnerabilidad (RF38) | `tipo`, `personas`, `lat`, `lng`, `nota` (≤ 40) | Persona E |
+| `R` | Recurso crítico ofrezco/necesito (RF39) | `modo`, `tipo`, `cantidad`, `lat`, `lng` | Persona E |
+| `N` | Publicar necesidad u oferta (RF10, RF35) | `tipo`, `categoria`, `lat`, `lng`, `texto` (≤ 60) | Persona C |
+| `A` | Aceptar (RF12) | `codigo`, `eta` (5/10/15) | Persona C |
+| `L` / `C` / `F` / `X` | Llegué / Confirmo llegada / Terminé / Cancelar (RF14–RF18) | `codigo` | Persona C |
+
+**Bajada (`procesarSms` → intermediario → vecino):**
+
+| Tipo | Aviso | Campos | Dueño |
+| ---- | ----- | ------ | ----- |
+| `OK` | Acuse de recibo | `idMsg`, `codigo` creado (si aplica) | Persona D |
+| `EA` | Emergencia activada en tu zona | `codigoEmergencia`, `lat`, `lng` | Persona D |
+| `AL` | ¿Estás bien? (cada minuto mientras no responda) | `codigoEmergencia` | Persona D |
+| `VR` | Reporte de vulnerabilidad cercano | `codigo`, `tipo`, `personas`, `lat`, `lng` | Persona E |
+| `NV` | Necesidad u oferta nueva cerca, de mis oficios | `codigo`, `tipo`, `categoria`, `distancia`, `texto` (≤ 40) | Persona C |
+| `ES` | Cambio de estado de mi necesidad o servicio | `codigo`, `estado`, `nombre` (≤ 15) | Persona C |
+
+**Reglas de transporte:**
+
+- **Destino:** la app guarda, cuando tiene internet, la lista de intermediarios activos de su zona (`intermediarios`) y envía al más cercano.
+- **Reintentos:** si no llega el `OK` en 2 min, reintenta hasta 3 veces (al mismo intermediario o al siguiente de la lista).
+- **Bajada selectiva:** solo se envía por SMS a vecinos sin señal reciente (última ubicación hace más de 2 min) y, en el caso de `NV`, solo a los que ofrecen ese oficio, con un máximo de 10 destinatarios por evento (control de costo).
+- **Recepción en el teléfono del vecino:** el receptor nativo descifra el SMS, actualiza la caché local y muestra una notificación. Los tipos `EA` y `AL` usan el canal «Emergencias» con pantalla completa.
+- **Datos de prueba:** cada tipo tiene en `shared/sms/__tests__` un vector con el texto plano, el SMS cifrado y su largo, y la prueba falla si supera su presupuesto de segmentos.
 
 ## 11. Diagramas de secuencia
 
@@ -820,7 +1039,7 @@ sequenceDiagram
     end
 ```
 
-### 11.7 Contingencia por SMS (Fase 2)
+### 11.7 Contingencia por SMS
 
 Cubre: RF26, RF27, RF28 · RN-16 · RNF12
 
@@ -904,6 +1123,12 @@ sequenceDiagram
 | 2026-11-07 | Iniciar sesión con Apple | RF30 queda para el futuro, solo si se lanza iOS | Norma 4.8 de App Store; no aplica mientras sea solo Android |
 | 2026-11-07 | Ruta en el mapa | Dos puntos + «Abrir en Google Maps» | Evita un API de rutas de pago |
 | 2026-11-07 | Facebook | Fase 2 | Su revisión de app puede demorar más que la hackatón |
+| 2026-11-07 | Alcance del reto (48 h) | Se agregan directorio con Visto Bueno, bolsa de trabajos, muro de ofertas, identidad, onboarding, tablero humanitario, directorio de emergencia y modo offline (RF31–RF42) | Características esperadas del reto |
+| 2026-11-07 | Paleta | Normal = naranja de marca con neutros; calor = terracota; lluvia = azul noche; emergencia = rojo | La identidad visual pide naranja dominante |
+| 2026-11-07 | Validación de identidad | Selfie + foto del DNI + DNI + nombres; revisión manual por un validador; sin API externa | Viable en 48 h |
+| 2026-11-07 | Donaciones con Yape/Plin | Fuera del alcance; solo donaciones materiales en el muro | No hay API pública para cobros entre personas |
+| 2026-11-07 | Grupos de apoyo | Fichas del directorio de emergencia con enlace a WhatsApp; sin chat propio | Un chat moderado no cabe en 48 h |
+| 2026-11-07 | SMS | Pasa de Fase 2 a **MVP**; teléfono obligatorio en el registro (cierra la pregunta 6) | El SMS es la base del modo offline |
 
 ### 12.2 Preguntas abiertas
 
@@ -914,7 +1139,7 @@ sequenceDiagram
 | 3 | ¿Radio del feed de necesidades? Propuesta: 3 km. | RF09 | Equipo |
 | 4 | ¿Umbral de "calor inusual"? Propuesta: aparente ≥ 30 °C o ≥ media de 30 días + 5 °C. ¿Es para Lima u otra ciudad? | RF29 | Equipo |
 | 5 | ¿Se necesita chat o llamada entre solicitante y prestador? Hoy está fuera del alcance. | Alcance | Equipo |
-| 6 | El teléfono es obligatorio para la contingencia SMS (Fase 2). ¿Se pide en el registro o al activar la contingencia? | RF01, RF26 | Equipo |
+| 6 | ~~¿Teléfono en el registro o al activar la contingencia?~~ Resuelta: obligatorio en el registro. | RF01, RF26 | — |
 | 7 | ¿Se bloquea publicar necesidades durante el modo emergencia o se permite pedir ayuda específica (p. ej., primeros auxilios)? | RF22 | Equipo |
 | 8 | ¿Quién opera el móvil intermediario, con qué chip y qué plan de SMS? ¿Uno por zona o uno para toda la demo? ¿Cómo se activa el modo intermediario (código de administrador)? | RF26–RF28 | Equipo |
 | 9 | ¿Qué dominio propio se usará para Hosting y los App Links? ¿Quién tiene acceso al DNS? (Sin dominio propio se puede usar `*.web.app`.) | RF04, RF28, RNF14 | Equipo |
