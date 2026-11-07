@@ -3,6 +3,7 @@ import type { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'Vecinos',
   slug: 'vecinos',
+  owner: 'fabriziotc06',
   scheme: 'vecinos',
   version: '0.1.0',
   orientation: 'portrait',
@@ -75,8 +76,13 @@ const config: ExpoConfig = {
       },
     ],
   ],
-  experiments: {
+    experiments: {
     typedRoutes: true,
+  },
+  extra: {
+    eas: {
+      projectId: '655f5186-29d4-437e-9320-3e5b5e525b6c',
+    },
   },
 };
 
