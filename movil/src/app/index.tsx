@@ -1,11 +1,8 @@
-// Ruta: src/app/index.tsx  (TEMPORAL, solo para probar; NO lo subas a Git)
-import { Link } from "expo-router";
-import { View } from "react-native";
+// Ruta: src/app/index.tsx
+// Entrada de la app: lleva a Inicio (P04). Cuando exista la sesión (Persona A), el layout de (privado)
+// redirige a (publico)/ingresar si no hay usuario.
+import { Redirect } from "expo-router";
 
-export default function Inicio() {
-  return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-      <Link href="/emergencia">Probar mapa de emergencia</Link>
-    </View>
-  );
+export default function Entrada() {
+  return <Redirect href="/inicio" />;
 }

@@ -28,3 +28,17 @@ Manda el README raíz. De [muro.png](muro.png) solo se toman las posiciones (sec
 - Texto blanco sobre el botón naranja (RNF03); en muro.png es oscuro.
 - Las tarjetas son necesidades y ofertas (RF09, RF35), no posts de «Encuentro vecinal» o «Vida de barrio»; sin fotos grandes ni «comentarios» (no hay chat, sección 3.2).
 - Ajustes a resolver en la implementación: ver «Decisión» en [prompt.md](prompt.md) (ancho por dispositivo, pie de la tarjeta, icono de Favores, chip de estado en su línea, vacío sin botón duplicado, icono del tema junto al nombre, tokens de éxito para el tema lluvia).
+
+## Implementación (2026-11-07)
+
+Código en `movil/src/modulos/favores/` (pantalla `InicioPantalla`), ruta `movil/src/app/(privado)/(pestanas)/inicio/index.tsx`. Hoy funciona con datos simulados (`movil/src/simulaciones/favores.ts`).
+
+| Frame | Cómo verlo |
+| --- | --- |
+| 04-C Vacío | `npx expo start --dev-client` (escenario por defecto) |
+| 04-A Inicio | `EXPO_PUBLIC_ESCENARIO_P04=muro npx expo start --dev-client` |
+| 04-B Publicación activa | `EXPO_PUBLIC_ESCENARIO_P04=activa …` |
+| 04-D Sin conexión | `EXPO_PUBLIC_ESCENARIO_P04=sin-conexion …` (o modo avión) |
+| 04-E Lluvia | `EXPO_PUBLIC_TEMA=lluvia …` (combinable con cualquier escenario) |
+
+Ajustes de la «Decisión» aplicados: 1 a 8. El 9 (tokens `exito` / `exitoFondo`) quedó en `compartido/tema/temas.ts` junto con `sos`, `superficieAlterna`, `acentoFondo`, `franja`, `deshabilitado` y `enlace`, pendiente de revisión por B.
