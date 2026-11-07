@@ -1,21 +1,42 @@
-// Ruta: src/app/_layout.tsx
-// Layout raíz: proveedores globales (README 9.5). Hoy: zonas seguras y tema.
-// Pendiente (Persona A): sesión (redirección a (publico) sin usuario), bandeja de salida y notificaciones.
-import { ProveedorTema, useTema } from "@/compartido/tema";
-import { Stack } from "expo-router";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, View } from 'react-native';
+import { SesionProvider, useSesion } from '../nucleo/sesion';
 
+/**
+ * @description Decide qué grupo de rutas se puede abrir según haya sesión: (privado) con sesión, (publico) sin ella.
+ */
 function Navegacion() {
-  const { colores } = useTema();
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo } }} />;
+  const { autenticado, cargando } = useSesion();
+
+  if (cargando) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAF9' }}>
+        <ActivityIndicator size="large" color="#C2410C" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={autenticado}>
+        <Stack.Screen name="(privado)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!autenticado}>
+        <Stack.Screen name="(publico)" />
+      </Stack.Protected>
+    </Stack>
+  );
 }
 
-export default function LayoutRaiz() {
+/**
+ * @description Layout raíz: proveedores globales (sesión; luego tema, bandeja de salida y notificaciones).
+ */
+export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <ProveedorTema>
-        <Navegacion />
-      </ProveedorTema>
-    </SafeAreaProvider>
+    <SesionProvider>
+      <StatusBar style="dark" />
+      <Navegacion />
+    </SesionProvider>
   );
 }
