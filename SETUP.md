@@ -5,12 +5,12 @@
 
 ## 1. Herramientas (una sola vez)
 
-| Herramienta | Versión | Verificar con |
-| ----------- | ------- | ------------- |
-| Node.js (con nvm) | 22 LTS | `node -v` |
-| Git | La última | `git --version` |
-| JDK | 17 (Temurin) | `java -version` |
-| Android Studio | La última | — |
+| Herramienta            | Versión                                               | Verificar con                             |
+| ---------------------- | ------------------------------------------------------ | ----------------------------------------- |
+| Node.js (con nvm)      | 22 LTS                                                 | `node -v`                               |
+| Git                    | La última                                             | `git --version`                         |
+| JDK                    | 17 (Temurin)                                           | `java -version`                         |
+| Android Studio         | La última                                             | —                                        |
 | EAS CLI y Firebase CLI | La última (`npm install -g eas-cli firebase-tools`) | `eas --version`, `firebase --version` |
 
 En **Android Studio → SDK Manager**:
@@ -63,7 +63,6 @@ Copien `google-services.json` (lo comparte la persona A por el grupo, **nunca** 
    ```
 
    Debe aparecer el dispositivo con la palabra `device`.
-
 2. Compilen e instalen:
 
    ```cmd
@@ -107,12 +106,38 @@ Solo hay que volver a `npx expo prebuild --clean` + `npx expo run:android` cuand
 
 Cada computadora tiene su propia firma de depuración. Sin registrarla, el login con Google falla en ese celular.
 
+Requisito: haber ejecutado antes `npx expo prebuild --clean` (sección 3), porque la carpeta `android/` se genera ahí.
+
+**Windows (cmd):**
+
 ```cmd
 cd C:\dev\vecinos\movil\android
 gradlew signingReport
 ```
 
-Copien **SHA1** y **SHA-256** de la variante `debug` y envíenselos a la persona A, que los registra en Firebase.
+**macOS (Terminal):**
+
+```bash
+cd ~/dev/vecinos/movil/android
+./gradlew signingReport
+```
+
+Si en macOS aparece `permission denied: ./gradlew`, ejecuten `chmod +x gradlew` y repitan. Si aparece `Unable to locate a Java Runtime`, configuren el JDK 17 en la sesión:
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+```
+
+(Para dejarlo permanente, agreguen esa línea a `~/.zshrc` y abran una Terminal nueva).
+
+**Alternativa en macOS sin Gradle** (lee el keystore de depuración que usa el proyecto):
+
+```bash
+cd ~/dev/vecinos/movil/android
+keytool -list -v -keystore app/debug.keystore -alias androiddebugkey -storepass android -keypass android
+```
+
+En la salida de `signingReport`, busquen el bloque `Variant: debug` / `Config: debug`. Copien **SHA1** y **SHA-256** y envíenselos a la persona A, que los registra en Firebase.
 
 ## 7. Reglas del equipo
 
@@ -123,13 +148,13 @@ Copien **SHA1** y **SHA-256** de la variante `debug` y envíenselos a la persona
 
 ## 8. Errores comunes
 
-| Error | Solución |
-| ----- | -------- |
-| `Module was compiled with an incompatible version of Kotlin` | Hagan `git pull` (incluye `movil/plugins/withFirebaseBom.js`) y repitan `npx expo prebuild --clean` |
-| `Filename longer than 260 characters` (ninja) | Descarguen `ninja-win.zip` de github.com/ninja-build/ninja/releases. En `%LOCALAPPDATA%\Android\Sdk\cmake\3.22.1\bin`, renombren `ninja.exe` a `ninja-old.exe` y copien el nuevo. Borren `movil\android\app\.cxx` y vuelvan a ejecutar `npx expo run:android` |
-| `File google-services.json is missing` | Cópienlo en `movil\` |
-| `SDK location not found` | Revisen `echo %ANDROID_HOME%` en una cmd nueva |
-| `adb devices` vacío | Activen Depuración USB, cambien el modo USB a **Transferencia de archivos** y prueben otro cable |
-| `INSTALL_FAILED_USER_RESTRICTED` (Xiaomi, Redmi, POCO) | En Opciones de desarrollador, activen **Instalar vía USB** |
-| El celular muestra el lanzador y no conecta | `adb reverse tcp:8081 tcp:8081` y `http://localhost:8081` → Connect |
-| Alternativa si no logran compilar en local | `eas build --platform android --profile development` compila en la nube (puede haber cola) |
+| Error                                                          | Solución                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Module was compiled with an incompatible version of Kotlin` | Hagan `git pull` (incluye `movil/plugins/withFirebaseBom.js`) y repitan `npx expo prebuild --clean`                                                                                                                                                                 |
+| `Filename longer than 260 characters` (ninja)                | Descarguen `ninja-win.zip` de github.com/ninja-build/ninja/releases. En `%LOCALAPPDATA%\Android\Sdk\cmake\3.22.1\bin`, renombren `ninja.exe` a `ninja-old.exe` y copien el nuevo. Borren `movil\android\app\.cxx` y vuelvan a ejecutar `npx expo run:android` |
+| `File google-services.json is missing`                       | Cópienlo en `movil\`                                                                                                                                                                                                                                                   |
+| `SDK location not found`                                     | Revisen `echo %ANDROID_HOME%` en una cmd nueva                                                                                                                                                                                                                          |
+| `adb devices` vacío                                         | Activen Depuración USB, cambien el modo USB a **Transferencia de archivos** y prueben otro cable                                                                                                                                                                   |
+| `INSTALL_FAILED_USER_RESTRICTED` (Xiaomi, Redmi, POCO)       | En Opciones de desarrollador, activen **Instalar vía USB**                                                                                                                                                                                                         |
+| El celular muestra el lanzador y no conecta                    | `adb reverse tcp:8081 tcp:8081` y `http://localhost:8081` → Connect                                                                                                                                                                                                  |
+| Alternativa si no logran compilar en local                     | `eas build --platform android --profile development` compila en la nube (puede haber cola)                                                                                                                                                                              |

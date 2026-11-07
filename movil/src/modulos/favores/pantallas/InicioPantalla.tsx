@@ -11,7 +11,6 @@ import { formatearHace, primerNombre } from "@/compartido/utilidades/formatos";
 import { usePendientesBandeja } from "@/nucleo/bandeja-salida";
 import { abrirAjustesNotificaciones, usePermisoNotificaciones } from "@/nucleo/notificaciones";
 import { useConexion } from "@/nucleo/red";
-import { useSesion } from "@/nucleo/sesion";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, View, type ListRenderItem } from "react-native";
@@ -24,6 +23,7 @@ import { TarjetaMuro } from "../componentes/TarjetaMuro";
 import { TEXTOS_INICIO } from "../constantes";
 import { useMiPublicacion } from "../hooks/useMiPublicacion";
 import { useMuro } from "../hooks/useMuro";
+import { useVecinoActual } from "../hooks/useVecinoActual";
 import { puedeCrearPublicacion } from "../reglas";
 import type { ElementoMuro } from "../tipos";
 
@@ -35,7 +35,7 @@ function avisarProximamente(pantalla: string) {
 export function InicioPantalla() {
   const { colores } = useTema();
   const router = useRouter();
-  const { vecino } = useSesion();
+  const vecino = useVecinoActual();
   const { sinConexion } = useConexion();
   const pendientes = usePendientesBandeja();
   const permiso = usePermisoNotificaciones();

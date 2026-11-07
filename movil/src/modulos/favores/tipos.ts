@@ -2,6 +2,23 @@
 // Tipos del módulo favores. Cuando exista `compartido/src/modelos` (Persona C), este archivo los re-exporta.
 // Fechas en milisegundos (Date.now()) para no depender de Firebase en las simulaciones.
 import type { OficioId } from "@/compartido/constantes/oficios";
+import type { Coordenada } from "@/compartido/utilidades/geo";
+
+/**
+ * Datos del vecino que necesita P04. `uid` y `nombre` salen de la sesión (nucleo/sesion);
+ * el resto, de `usuarios/{uid}` cuando exista ese listener (hoy, de simulaciones/).
+ */
+export type VecinoActual = {
+  uid: string;
+  nombre: string;
+  /** No está en el modelo de la sección 5.4: pendiente de definir con A. */
+  barrio: string | null;
+  oficios: OficioId[];
+  /** Puntero de RN-04: lo escriben solo las funciones. */
+  necesidadActivaId: string | null;
+  /** Última ubicación conocida (centro del muro, RF09). */
+  ubicacion: Coordenada | null;
+};
 
 /** Estados de la necesidad (README, sección 5.1). */
 export type EstadoNecesidad =

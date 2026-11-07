@@ -1,21 +1,30 @@
-import { Tabs } from 'expo-router';
+import { useTema } from '@/compartido/tema';
+import { BarraPestanas, type PestanaConfig } from '@/compartido/ui';
+import { Tabs } from 'expo-router/js-tabs';
+
+/** Título e icono de cada pestaña (sección 7). Favores usa la mano con corazón (diseño P04, decisión 3). */
+const PESTANAS: Record<string, PestanaConfig> = {
+  inicio: { titulo: 'Inicio', icono: 'home' },
+  servicios: { titulo: 'Servicios', icono: 'build' },
+  favores: { titulo: 'Favores', icono: 'volunteer_activism' },
+  perfil: { titulo: 'Perfil', icono: 'person' },
+};
 
 /**
- * @description Las 4 pestañas del README (sección 7). Cada una aparece cuando su dueño crea el index.tsx de su carpeta.
+ * @description Las 4 pestañas del README (sección 7), con la barra del diseño P04: de borde a borde y
+ * píldora en la activa. Cada pestaña es una carpeta con su propio Stack.
  */
 export default function PestanasLayout() {
+  const { colores } = useTema();
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#C2410C',
-        tabBarInactiveTintColor: '#57534E',
-      }}
+      tabBar={(props) => <BarraPestanas {...props} pestanas={PESTANAS} />}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colores.fondo } }}
     >
-      <Tabs.Screen name="inicio" options={{ title: 'Inicio' }} />
-      <Tabs.Screen name="servicios" options={{ title: 'Servicios' }} />
-      <Tabs.Screen name="favores" options={{ title: 'Favores' }} />
-      <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
+      <Tabs.Screen name="inicio" />
+      <Tabs.Screen name="servicios" />
+      <Tabs.Screen name="favores" />
+      <Tabs.Screen name="perfil" />
     </Tabs>
   );
 }

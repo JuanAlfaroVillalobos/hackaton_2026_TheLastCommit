@@ -6,6 +6,5 @@ import { useSesion } from '../nucleo/sesion';
  */
 export default function Inicio() {
   const { autenticado } = useSesion();
-  // Cuando Malek cree P04 en (pestanas)/inicio, cambiar '/perfil' por '/inicio'.
-  return <Redirect href={autenticado ? '/perfil' : '/bienvenida'} />;
+  return <Redirect href={autenticado ? '/inicio' : '/bienvenida'} />;
 }

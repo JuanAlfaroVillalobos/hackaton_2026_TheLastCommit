@@ -1,9 +1,8 @@
 // Ruta: src/simulaciones/favores.ts
 // Datos falsos del módulo favores (P04) y de la sesión. Zona: la misma de ayudaHumanitaria (Trujillo).
 // Los servicios reales tendrán las mismas firmas; solo cambia el origen de los datos.
-import type { PublicacionConAutor } from "@/modulos/favores";
+import type { PublicacionConAutor, VecinoActual } from "@/modulos/favores";
 import type { EstadoPermiso } from "@/nucleo/notificaciones";
-import type { VecinoActual } from "@/nucleo/sesion";
 import { geohashForLocation } from "geofire-common";
 import { UID_YO, ZONA_DEMO } from "./ayudaHumanitaria";
 import { ESCENARIO_DEMO } from "./escenario";
