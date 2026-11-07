@@ -1,17 +1,11 @@
-import { Text, View, StyleSheet } from "react-native";
+// Ruta: src/app/index.tsx  (TEMPORAL, solo para probar; NO lo subas a Git)
+import { Link } from "expo-router";
+import { View } from "react-native";
 
-export default function Index() {
+export default function Inicio() {
   return (
-    <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <Link href="/emergencia">Probar mapa de emergencia</Link>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
