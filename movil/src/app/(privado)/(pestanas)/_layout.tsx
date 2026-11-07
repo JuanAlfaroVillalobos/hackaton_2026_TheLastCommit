@@ -1,28 +1,21 @@
-// Ruta: src/app/(privado)/(pestanas)/_layout.tsx
-// 4 pestañas (README, sección 7): Inicio, Servicios, Favores, Perfil. Cada pestaña es una carpeta con
-// su propio Stack, para que sus pantallas internas (p. ej. P05–P09 en Favores) no oculten la barra.
-import { useTema } from "@/compartido/tema";
-import { BarraPestanas, type PestanaConfig } from "@/compartido/ui";
-import { Tabs } from "expo-router/js-tabs";
+import { Tabs } from 'expo-router';
 
-const PESTANAS: Record<string, PestanaConfig> = {
-  inicio: { titulo: "Inicio", icono: "home" },
-  servicios: { titulo: "Servicios", icono: "build" },
-  favores: { titulo: "Favores", icono: "volunteer_activism" },
-  perfil: { titulo: "Perfil", icono: "person" },
-};
-
-export default function LayoutPestanas() {
-  const { colores } = useTema();
+/**
+ * @description Las 4 pestañas del README (sección 7). Cada una aparece cuando su dueño crea el index.tsx de su carpeta.
+ */
+export default function PestanasLayout() {
   return (
     <Tabs
-      tabBar={(props) => <BarraPestanas {...props} pestanas={PESTANAS} />}
-      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colores.fondo } }}
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#C2410C',
+        tabBarInactiveTintColor: '#57534E',
+      }}
     >
-      <Tabs.Screen name="inicio" />
-      <Tabs.Screen name="servicios" />
-      <Tabs.Screen name="favores" />
-      <Tabs.Screen name="perfil" />
+      <Tabs.Screen name="inicio" options={{ title: 'Inicio' }} />
+      <Tabs.Screen name="servicios" options={{ title: 'Servicios' }} />
+      <Tabs.Screen name="favores" options={{ title: 'Favores' }} />
+      <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
     </Tabs>
   );
 }

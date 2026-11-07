@@ -1,8 +1,11 @@
-// Ruta: src/app/index.tsx
-// Entrada de la app: lleva a Inicio (P04). Cuando exista la sesión (Persona A), el layout de (privado)
-// redirige a (publico)/ingresar si no hay usuario.
-import { Redirect } from "expo-router";
+import { Redirect } from 'expo-router';
+import { useSesion } from '../nucleo/sesion';
 
-export default function Entrada() {
-  return <Redirect href="/inicio" />;
+/**
+ * @description Punto de entrada: con sesión va a las pestañas; sin sesión, a la bienvenida.
+ */
+export default function Inicio() {
+  const { autenticado } = useSesion();
+  // Cuando Malek cree P04 en (pestanas)/inicio, cambiar '/perfil' por '/inicio'.
+  return <Redirect href={autenticado ? '/perfil' : '/bienvenida'} />;
 }

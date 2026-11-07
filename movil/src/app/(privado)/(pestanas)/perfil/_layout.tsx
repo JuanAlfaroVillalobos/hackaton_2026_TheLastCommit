@@ -1,9 +1,6 @@
-// Ruta: src/app/(privado)/(pestanas)/perfil/_layout.tsx
-// Stack propio de la pestaña: sus pantallas internas se apilan sin ocultar la barra de pestañas.
-import { useTema } from "@/compartido/tema";
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
 
+// Pila propia de la pestaña: aquí el dueño agrega sus pantallas internas (detalle, publicar, etc.).
 export default function Layout() {
-  const { colores } = useTema();
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo } }} />;
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
