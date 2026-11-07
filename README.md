@@ -209,7 +209,7 @@ Todo debe seguir funcionando con baja conectividad: los datos se guardan en el t
 
 #### Emergencia
 
-- **RF20** — Un botón rojo flotante «Emergencia» en todas las pantallas. Requiere mantenerlo pulsado 2 s con vibración de confirmación (`expo-haptics`) y luego confirmar «¿Necesitas ayuda?». La función `registrarAlerta` guarda la alerta con la ubicación; la función calcula la celda H3 (RN-11). Un vecino cuenta como máximo una vez por celda en la ventana de 10 min (RN-12). Sin internet se ofrece RF26.
+- **RF20** — Un botón rojo «SOS» en el encabezado, arriba a la derecha, en todas las pantallas (sección 7). Requiere mantenerlo pulsado 2 s con vibración de confirmación (`expo-haptics`) y luego confirmar «¿Necesitas ayuda?». La función `registrarAlerta` guarda la alerta con la ubicación; la función calcula la celda H3 (RN-11). Un vecino cuenta como máximo una vez por celda en la ventana de 10 min (RN-12). Sin internet se ofrece RF26.
 - **RF21** — Al crearse una alerta, un trigger de Firestore recalcula la celda: si se cumple RN-11, crea `emergencias/{id}` `ACTIVA` sobre la celda y sus 6 vecinas (k = 1) y crea `emergencias/{id}/vecinos/{uid}` para cada vecino activo de la zona. Las apps escuchan `emergencias` que contengan su celda y entran en modo emergencia en ≤ 10 s; además se envía un push de alta prioridad.
 - **RF22** — En modo emergencia, P04 se reemplaza por P11: mapa de la zona con un marcador para cada vecino `NECESITA_AYUDA` o `SIN_RESPONDER` (nombre, tiempo desde la alerta). Solo se ven los vecinos de la zona. El tema cambia a rojo (RF29). Las necesidades en curso no se cancelan, pero la publicación de nuevas queda deshabilitada mientras dure el modo (supuesto).
 - **RF23** — Cada 60 s la función programada `cadaMinuto` envía un push FCM **solo de datos y de prioridad alta** a cada vecino de la zona en estado `SIN_RESPONDER` o `NECESITA_AYUDA`. Al recibirlo, la app (incluso cerrada) muestra una notificación del canal «Emergencias» (importancia máxima, sonido y vibración propios) con **full-screen intent**: si el teléfono está bloqueado o la pantalla apagada, se enciende y abre P12 a pantalla completa sobre la pantalla de bloqueo; si está en uso, aparece como aviso flotante. Al instalar la app se verifica el permiso de pantalla completa (`canUseFullScreenIntent()` en Android 14+); si falta, P03 lleva a los ajustes para activarlo. La notificación también trae las acciones «Estoy bien» y «Necesito ayuda», que se pueden pulsar sin abrir la app.
@@ -414,33 +414,38 @@ stateDiagram-v2
 
 ## 7. Pantallas
 
-| ID | Pantalla | Actor | RF |
-| -- | -------- | ----- | -- |
-| P01 | Inicio de sesión (clave, Google, Facebook, enlace mágico) | Vecino | RF02, RF03, RF04, RF07 |
-| P02 | Registro | Vecino | RF01, RF02, RF03 |
-| P03 | Completar perfil: oficios, foto, permisos | Vecino | RF05, RF06, RF08 |
-| P04 | Principal: necesidades cercanas + «Publicar necesidad» | Vecino | RF09, RF20, RF29 |
-| P05 | Publicar necesidad (oficio → descripción → ubicación) | Solicitante | RF10 |
-| P06 | Detalle de necesidad + aceptar | Vecino | RF11, RF12 |
-| P07 | Servicio — vista del prestador (mapa, ETA, «Ya llegué», terminar, desistir) | Prestador | RF12, RF14, RF16, RF18 |
-| P08 | Servicio — vista del solicitante (prestador en el mapa, «Ya llegó», terminar, cancelar) | Solicitante | RF13, RF15, RF16, RF18 |
-| P09 | Calificación | Ambos | RF17 |
-| P10 | Perfil (oficios, foto, horas, calificación, historial, activar modo intermediario) | Vecino | RF05, RF06, RF17, RF27 |
-| P11 | Mapa de emergencia | Vecino | RF22, RF24, RF25 |
-| P12 | Alerta a pantalla completa «Estoy bien» / «Necesito ayuda» | Vecino | RF23, RF24 |
-| P13 | Modo sin conexión (enviar por SMS / mensaje recibido / bandeja de salida) | Vecino | RF26, RF28, RF41 |
-| P14 | Publicar en el directorio (3 pasos) | Vecino | RF31, RF42 |
-| P15 | Directorio: lista, mapa, búsqueda y filtros | Vecino | RF32 |
-| P16 | Ficha del directorio (contactar, Visto Bueno) | Vecino | RF32, RF33 |
-| P17 | Bolsa de trabajos: lista y detalle («Me interesa») | Vecino | RF34 |
-| P18 | Publicar trabajo (3 pasos) e interesados | Vecino | RF34 |
-| P19 | Verificar identidad | Vecino, Validador | RF36 |
-| P20 | Tutorial y guía de ayuda | Vecino | RF37 |
-| P21 | Reportar vulnerabilidad | Vecino | RF38, RF42 |
-| P22 | Tablero humanitario (vulnerabilidad + recursos críticos) | Vecino | RF39 |
-| P23 | Directorio de emergencia y grupos de apoyo | Vecino | RF40 |
+| ID | Pantalla | Actor | RF | Diseño |
+| -- | -------- | ----- | -- | ------ |
+| P01 | Inicio de sesión (clave, Google, Facebook, enlace mágico) | Vecino | RF02, RF03, RF04, RF07 | Pendiente |
+| P02 | Registro | Vecino | RF01, RF02, RF03 | Pendiente |
+| P03 | Completar perfil: oficios, foto, permisos | Vecino | RF05, RF06, RF08 | Pendiente |
+| P04 | Principal: necesidades cercanas + «Publicar necesidad» | Vecino | RF09, RF20, RF29 | Aprobado: [v1.1](<diseno/P04-Inicio/v1.1.png>) ([ficha](diseno/P04-Inicio/README.md)) |
+| P05 | Publicar necesidad (oficio → descripción → ubicación) | Solicitante | RF10 | Pendiente |
+| P06 | Detalle de necesidad + aceptar | Vecino | RF11, RF12 | Pendiente |
+| P07 | Servicio — vista del prestador (mapa, ETA, «Ya llegué», terminar, desistir) | Prestador | RF12, RF14, RF16, RF18 | Pendiente |
+| P08 | Servicio — vista del solicitante (prestador en el mapa, «Ya llegó», terminar, cancelar) | Solicitante | RF13, RF15, RF16, RF18 | Pendiente |
+| P09 | Calificación | Ambos | RF17 | Pendiente |
+| P10 | Perfil (oficios, foto, horas, calificación, historial, activar modo intermediario) | Vecino | RF05, RF06, RF17, RF27 | Pendiente |
+| P11 | Mapa de emergencia | Vecino | RF22, RF24, RF25 | Pendiente |
+| P12 | Alerta a pantalla completa «Estoy bien» / «Necesito ayuda» | Vecino | RF23, RF24 | Pendiente |
+| P13 | Modo sin conexión (enviar por SMS / mensaje recibido / bandeja de salida) | Vecino | RF26, RF28, RF41 | Pendiente |
+| P14 | Publicar en el directorio (3 pasos) | Vecino | RF31, RF42 | Pendiente |
+| P15 | Directorio: lista, mapa, búsqueda y filtros | Vecino | RF32 | Pendiente |
+| P16 | Ficha del directorio (contactar, Visto Bueno) | Vecino | RF32, RF33 | Pendiente |
+| P17 | Bolsa de trabajos: lista y detalle («Me interesa») | Vecino | RF34 | Pendiente |
+| P18 | Publicar trabajo (3 pasos) e interesados | Vecino | RF34 | Pendiente |
+| P19 | Verificar identidad | Vecino, Validador | RF36 | Pendiente |
+| P20 | Tutorial y guía de ayuda | Vecino | RF37 | Pendiente |
+| P21 | Reportar vulnerabilidad | Vecino | RF38, RF42 | Pendiente |
+| P22 | Tablero humanitario (vulnerabilidad + recursos críticos) | Vecino | RF39 | Pendiente |
+| P23 | Directorio de emergencia y grupos de apoyo | Vecino | RF40 | Pendiente |
 
-Navegación principal (pestañas inferiores): **Muro** (P04) · **Directorio** (P15) · **Trabajos** (P17) · **Emergencia** (P22/P11) · **Perfil** (P10). El botón de emergencia flota sobre todas.
+Navegación principal, según la referencia [diseno/P04-Inicio/muro.png](diseno/P04-Inicio/muro.png) (decisión del 2026-11-07, sección 12.1):
+
+- **Pestañas inferiores (4):** **Inicio** (P04) · **Servicios** (P15 directorio y P17 bolsa de trabajos) · **Favores** (muro solidario y ciclo del servicio, P05–P09) · **Perfil** (P10). La pestaña activa se marca con una píldora de color suave detrás del icono.
+- **Encabezado:** a la izquierda, el icono de casa con el nombre de la app y el barrio debajo; a la derecha, el botón **«SOS»** (RF20), en todas las pantallas.
+- **Accesos rápidos en Inicio (P04):** cuatro tarjetas en cuadrícula de 2 × 2 (Servicios, Emergencias, Favores, Mi perfil) y el botón ancho «Crear publicación» debajo. **Emergencias** (P22/P11, P21, P23) se abre desde ese acceso, ya no es una pestaña.
+- Qué muestra Inicio frente a Favores está en la pregunta 12 de la sección 12.2.
 
 ```mermaid
 flowchart LR
@@ -478,7 +483,7 @@ La identidad visual es **naranja dominante** (acción, rescate, energía y cerca
 | Barra de estado | oscura | clara | oscura | oscura (clara en P12) |
 | Icono en la barra superior | — | 🌧 lluvia | 🌡 calor | ⚠ emergencia |
 
-El naranja `#C2410C` se usa para botones y texto sobre blanco (contraste 5,2:1); el naranja claro `#FB923C` solo para fondos, iconos e ilustraciones, nunca para texto. El botón flotante de emergencia usa `#C62828` en todos los temas (se distingue del naranja por forma e icono ⚠), salvo en lluvia, que usa `#FF5A5F` para mantener el contraste sobre el fondo oscuro. El estilo del mapa (`customMapStyle`) pasa a oscuro con el tema de lluvia. Los contrastes se validan según RNF03 antes de la entrega.
+El naranja `#C2410C` se usa para botones y texto sobre blanco (contraste 5,2:1); el naranja claro `#FB923C` solo para fondos, iconos e ilustraciones, nunca para texto. El botón «SOS» del encabezado usa `#C62828` en todos los temas (se distingue del naranja por forma e icono ⚠), salvo en lluvia, que usa `#FF5A5F` para mantener el contraste sobre el fondo oscuro. El estilo del mapa (`customMapStyle`) pasa a oscuro con el tema de lluvia. Los contrastes se validan según RNF03 antes de la entrega.
 
 ## 9. Stack tecnológico
 
@@ -558,12 +563,12 @@ Monorepo con 4 paquetes. Dentro de la app se organiza **por módulos de negocio*
 │   │   │   │   ├── completar-perfil.tsx    → cuentas (P03)
 │   │   │   │   ├── verificar-identidad.tsx → identidad (P19)
 │   │   │   │   ├── (pestanas)/
-│   │   │   │   │   ├── _layout.tsx         # pestañas + botón de emergencia flotante
-│   │   │   │   │   ├── favores/            → favores (P04–P09)
-│   │   │   │   │   ├── directorio/         → directorio (P14–P16)
-│   │   │   │   │   ├── trabajos/           → trabajos (P17–P18)
-│   │   │   │   │   ├── emergencia/         → ayuda-humanitaria (P11, P21–P23)
+│   │   │   │   │   ├── _layout.tsx         # 4 pestañas (sección 7); el encabezado con «SOS» va en el layout de (privado)
+│   │   │   │   │   ├── inicio/             → favores (P04)
+│   │   │   │   │   ├── servicios/          → directorio (P14–P16) y trabajos (P17–P18)
+│   │   │   │   │   ├── favores/            → favores (P05–P09)
 │   │   │   │   │   └── perfil/             → cuentas (P10), contingencia-sms (modo intermediario)
+│   │   │   │   ├── emergencia/             → ayuda-humanitaria (P11, P21–P23), desde el acceso rápido de Inicio
 │   │   │   │   └── alerta.tsx              → emergencia (P12, modal a pantalla completa)
 │   │   │   └── s.tsx               # App Link de los SMS → contingencia-sms (P13)
 │   │   │
@@ -1129,6 +1134,7 @@ sequenceDiagram
 | 2026-11-07 | Donaciones con Yape/Plin | Fuera del alcance; solo donaciones materiales en el muro | No hay API pública para cobros entre personas |
 | 2026-11-07 | Grupos de apoyo | Fichas del directorio de emergencia con enlace a WhatsApp; sin chat propio | Un chat moderado no cabe en 48 h |
 | 2026-11-07 | SMS | Pasa de Fase 2 a **MVP**; teléfono obligatorio en el registro (cierra la pregunta 6) | El SMS es la base del modo offline |
+| 2026-11-07 | Navegación | Se toman de [diseno/P04-Inicio/muro.png](diseno/P04-Inicio/muro.png) **solo las posiciones**: 4 pestañas (Inicio, Servicios, Favores, Perfil), accesos rápidos 2 × 2 en Inicio y botón «SOS» en el encabezado en lugar del botón flotante. Emergencias pasa a un acceso rápido. Nombre, colores y contenido siguen este README | Referencia visual del equipo |
 
 ### 12.2 Preguntas abiertas
 
@@ -1145,3 +1151,4 @@ sequenceDiagram
 | 9 | ¿Qué dominio propio se usará para Hosting y los App Links? ¿Quién tiene acceso al DNS? (Sin dominio propio se puede usar `*.web.app`.) | RF04, RF28, RNF14 | Equipo |
 | 10 | ¿Se confirma la región `southamerica-east1`? (La región de Firestore no se puede cambiar después de crearla.) | RNF06 | Equipo |
 | 11 | ¿Qué teléfonos Android habrá en la demo (marcas y versiones)? Afecta las pruebas de full-screen intent y de optimización de batería (RNF07). | RNF01, RNF07 | Equipo |
+| 12 | Con las pestañas de muro.png, ¿qué muestra Inicio y qué muestra Favores? Propuesta: Inicio = saludo, accesos rápidos y un resumen del muro (P04, RF09); Favores = el muro completo con el filtro por tipo (RF35) y «Mis favores» en curso (P07/P08). | P04, sección 7 | Equipo |
