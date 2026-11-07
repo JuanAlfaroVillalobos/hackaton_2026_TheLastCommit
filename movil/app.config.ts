@@ -32,7 +32,7 @@ const config: ExpoConfig = {
       googleMaps: { apiKey: process.env.GOOGLE_MAPS_API_KEY },
     },
   },
-  plugins: [
+    plugins: [
     'expo-router',
     [
       'expo-splash-screen',
@@ -43,6 +43,7 @@ const config: ExpoConfig = {
         backgroundColor: '#F6F8F5',
       },
     ],
+    ['./plugins/withFirebaseBom.js', { bom: '34.19.0' }],
     '@react-native-firebase/app',
     '@react-native-firebase/auth',
     '@react-native-firebase/app-check',
