@@ -1,7 +1,6 @@
 import { ESPACIO, MAX_ESCALA_FUENTE, RADIO, TIPO, useTema } from '@/compartido/tema';
 import { Boton, Chip, Icono, Tarjeta, type NombreIcono } from '@/compartido/ui';
 import { useSesion } from '@/nucleo/sesion';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { router } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../componentes/Avatar';
@@ -65,7 +64,7 @@ function Contador({ valor, etiqueta }: { valor: string; etiqueta: string }) {
  */
 export default function PerfilPantalla() {
   const { colores } = useTema();
-  const { usuario, modoDesarrollo, salirModoDesarrollo } = useSesion();
+  const { usuario, modoDesarrollo, salirModoDesarrollo, salir } = useSesion();
 
   const nombre = usuario?.displayName ?? (modoDesarrollo ? 'Vecino de prueba' : 'Vecino');
   const detalle = usuario?.email ?? 'Barrio Los Olivos';
@@ -75,7 +74,7 @@ export default function PerfilPantalla() {
       salirModoDesarrollo();
       return;
     }
-    signOut(getAuth()).catch(() => Alert.alert('Cerrar sesión', 'No se pudo cerrar la sesión. Inténtalo de nuevo.'));
+    salir().catch(() => Alert.alert('Cerrar sesión', 'No se pudo cerrar la sesión. Inténtalo de nuevo.'));
   };
 
   return (

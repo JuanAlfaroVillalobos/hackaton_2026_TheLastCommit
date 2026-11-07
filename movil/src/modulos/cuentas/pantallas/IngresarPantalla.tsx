@@ -22,9 +22,26 @@ function pendiente(accion: string) {
  */
 export default function IngresarPantalla() {
   const { colores } = useTema();
-  const { entrarModoDesarrollo } = useSesion();
+  const { entrarModoDesarrollo, ingresar } = useSesion();
   const [correo, setCorreo] = useState('');
   const [clave, setClave] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  // Hoy contra la API simulada (cuenta de prueba: ana@vecinos.pe / vecinos123); en A2, Firebase Auth.
+  const enviar = async () => {
+    if (!correo.trim() || !clave) {
+      Alert.alert('Ingresar', 'Escribe tu correo y tu clave.');
+      return;
+    }
+    setEnviando(true);
+    try {
+      await ingresar(correo.trim(), clave);
+    } catch (error) {
+      Alert.alert('No pudimos ingresar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   return (
     <Pantalla>
@@ -54,7 +71,7 @@ export default function IngresarPantalla() {
         <View style={styles.olvido}>
           <Boton texto="¿Olvidaste tu clave?" variante="enlace" onPress={() => pendiente('Recuperar clave')} />
         </View>
-        <Boton texto="Ingresar" icono="login" onPress={() => pendiente('Ingresar')} />
+        <Boton texto={enviando ? 'Ingresando…' : 'Ingresar'} icono="login" deshabilitado={enviando} onPress={enviar} />
       </View>
 
       <Separador />
