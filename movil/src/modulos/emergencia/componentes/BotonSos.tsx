@@ -26,8 +26,8 @@ export function BotonSos() {
           try {
             await registrarAlerta();
             ToastAndroid.show("Alerta enviada", ToastAndroid.SHORT);
-          } catch {
-            Alert.alert("No se pudo enviar la alerta", "Inténtalo de nuevo.");
+          } catch (error) {
+            Alert.alert("No se pudo enviar la alerta", error instanceof Error ? error.message : "Inténtalo de nuevo.");
           } finally {
             setEnviando(false);
           }

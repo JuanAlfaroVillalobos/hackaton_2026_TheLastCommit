@@ -1,1 +1,1 @@
-export { SesionProvider, useSesion } from './SesionProvider';
+export { SesionProvider, useSesion, type UsuarioSesion } from './SesionProvider';
