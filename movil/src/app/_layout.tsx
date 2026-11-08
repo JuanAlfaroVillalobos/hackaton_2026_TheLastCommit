@@ -1,7 +1,6 @@
 import { ProveedorTema, useTema } from '@/compartido/tema';
+import { ProveedorNotificaciones } from '@/nucleo/notificaciones';
 import { SesionProvider, useSesion } from '@/nucleo/sesion';
-// Define la tarea de ubicación en segundo plano antes de montar la app (RF13).
-import '@/nucleo/ubicacion/segundoPlano';
 import { Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -33,13 +32,15 @@ function Navegacion() {
 }
 
 /**
- * @description Layout raíz: proveedores globales (tema y sesión; luego bandeja de salida y notificaciones). La barra de estado la ajusta ProveedorTema.
+ * @description Layout raíz: proveedores globales (tema, sesión y notificaciones; luego bandeja de salida). Las tareas de segundo plano se registran en src/nucleo/arranque.ts. La barra de estado la ajusta ProveedorTema.
  */
 export default function RootLayout() {
   return (
     <ProveedorTema>
       <SesionProvider>
-        <Navegacion />
+        <ProveedorNotificaciones>
+          <Navegacion />
+        </ProveedorNotificaciones>
       </SesionProvider>
     </ProveedorTema>
   );

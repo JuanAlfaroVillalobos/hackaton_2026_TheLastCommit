@@ -1,6 +1,13 @@
 import { ESPACIO, MAX_ESCALA_FUENTE, RADIO, TIPO, useTema } from '@/compartido/tema';
 import { Boton, Chip, Icono, Tarjeta, type NombreIcono } from '@/compartido/ui';
 import { OFICIOS } from '@/compartido/constantes/oficios';
+import { api } from '@/nucleo/api';
+import {
+  abrirAjustesNotificaciones,
+  mostrarNotificacion,
+  sondearAhora,
+  usePermisoNotificaciones,
+} from '@/nucleo/notificaciones';
 import { useSesion } from '@/nucleo/sesion';
 import { router } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -71,6 +78,32 @@ export default function PerfilPantalla() {
   const detalle = [perfil?.barrio, perfil?.telefono].filter(Boolean).join(' · ') || perfil?.correo || '';
   const oficios = perfil?.oficios ?? [];
 
+  const permiso = usePermisoNotificaciones();
+
+  /** Con permiso: pide a la API una notificación de prueba (o la muestra local en modo desarrollo). */
+  const probarNotificaciones = async () => {
+    if (permiso === 'denegado') {
+      Alert.alert(
+        'Notificaciones desactivadas',
+        'Actívalas para enterarte cuando un vecino responda tu pedido o haya una emergencia en tu zona.',
+        [
+          { text: 'Ahora no', style: 'cancel' },
+          { text: 'Ir a Ajustes', onPress: () => void abrirAjustesNotificaciones() },
+        ],
+      );
+      return;
+    }
+    try {
+      await api('/vecinos/yo/notificaciones/prueba', { metodo: 'POST', cuerpo: { canal: 'general' } });
+      sondearAhora();
+    } catch {
+      await mostrarNotificacion({
+        titulo: 'Notificación de prueba',
+        cuerpo: 'Si ves esto, las notificaciones de Vecinos funcionan.',
+      });
+    }
+  };
+
   const cerrarSesion = () => {
     salir().catch(() => Alert.alert('Cerrar sesión', 'No se pudo cerrar la sesión. Inténtalo de nuevo.'));
   };
@@ -136,6 +169,13 @@ export default function PerfilPantalla() {
           detalle="Así tus vecinos sabrán a quién le abren la puerta."
           chip="Sin verificar"
           onPress={() => router.push('/verificar-identidad')}
+        />
+        <FilaOpcion
+          icono="notifications"
+          titulo="Notificaciones"
+          detalle={permiso === 'concedido' ? 'Activadas. Toca para enviarte una de prueba.' : 'Desactivadas. Toca para activarlas.'}
+          chip={permiso === 'concedido' ? undefined : 'Desactivadas'}
+          onPress={() => void probarNotificaciones()}
         />
         <FilaOpcion
           icono="help"

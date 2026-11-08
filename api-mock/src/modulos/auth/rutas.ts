@@ -10,9 +10,9 @@ import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo
 import { nuevoId, texto } from '../../nucleo/utilidades.js';
 import { exigirTelefonoLibre, normalizarTelefono, validarClave } from './validaciones.js';
 
-export type UsuarioPublico = Omit<Usuario, 'clave'>;
+export type UsuarioPublico = Omit<Usuario, 'clave' | 'dispositivos'>;
 
-export function aPublico({ clave: _clave, ...resto }: Usuario): UsuarioPublico {
+export function aPublico({ clave: _clave, dispositivos: _dispositivos, ...resto }: Usuario): UsuarioPublico {
   return resto;
 }
 

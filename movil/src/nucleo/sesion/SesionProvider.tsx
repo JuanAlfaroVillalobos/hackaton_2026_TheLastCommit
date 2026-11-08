@@ -1,6 +1,7 @@
 import { OFICIOS, type OficioId } from '@/compartido/constantes/oficios';
 import type { Coordenada } from '@/compartido/utilidades/geo';
 import { api, ErrorApi, fijarToken } from '@/nucleo/api';
+import { darDeBajaDispositivo } from '@/nucleo/notificaciones/dispositivo';
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CambiosPerfil, DatosRegistro, PerfilVecino, UsuarioApi, UsuarioSesion } from './tipos';
@@ -145,6 +146,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   );
 
   const salir = useCallback(async () => {
+    // Antes de cerrar sesión: este teléfono deja de recibir avisos de la cuenta.
+    await darDeBajaDispositivo();
     await api('/auth/salir', { metodo: 'POST' }).catch(() => undefined);
     fijarToken(null);
     await guardarToken(null);
