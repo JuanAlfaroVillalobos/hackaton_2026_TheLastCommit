@@ -1,42 +1,79 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { OFICIOS, type OficioId } from '@/compartido/constantes/oficios';
+import type { Coordenada } from '@/compartido/utilidades/geo';
+import { api, ErrorApi, fijarToken } from '@/nucleo/api';
 import * as SecureStore from 'expo-secure-store';
-import { api, fijarToken } from '@/nucleo/api';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { CambiosPerfil, DatosRegistro, PerfilVecino, UsuarioApi, UsuarioSesion } from './tipos';
 
 // FIREBASE DESACTIVADO: la sesión viene de la API simulada (api-mock/). Al volver a Firebase Auth,
-// `ingresar`/`salir` llaman a signInWithEmailAndPassword/signOut, `usuario` sale de onAuthStateChanged
-// y el ID token se manda a la API con fijarToken(). Las pantallas no cambian.
-
-/** Subconjunto de FirebaseAuthTypes.User que usa la app; mismos nombres para que volver sea directo. */
-export interface UsuarioSesion {
-  uid: string;
-  displayName: string | null;
-  email: string | null;
-}
-
-interface UsuarioApi {
-  id: string;
-  nombre: string;
-  correo: string;
-}
+// `ingresar`/`registrar`/`salir` llaman a signInWithEmailAndPassword/createUser.../signOut, `usuario`
+// sale de onAuthStateChanged y el ID token se manda a la API con fijarToken(). Las pantallas no cambian.
 
 interface EstadoSesion {
   usuario: UsuarioSesion | null;
+  /** Perfil completo del vecino (null sin sesión o mientras carga). */
+  perfil: PerfilVecino | null;
   cargando: boolean;
   autenticado: boolean;
   modoDesarrollo: boolean;
   ingresar: (correo: string, clave: string) => Promise<void>;
+  registrar: (datos: DatosRegistro) => Promise<void>;
   salir: () => Promise<void>;
-  entrarModoDesarrollo: () => void;
+  recargarPerfil: () => Promise<void>;
+  actualizarPerfil: (cambios: CambiosPerfil) => Promise<void>;
+  /** Lo llama nucleo/ubicacion tras validar una ubicación, para que P04 se recentre al instante. */
+  fijarUbicacionLocal: (coordenada: Coordenada) => void;
+  entrarModoDesarrollo: () => Promise<void>;
   salirModoDesarrollo: () => void;
 }
 
-const CLAVE_TOKEN = 'vecinos.sesion.token';
+/** Clave de SecureStore del token; también la lee la tarea de ubicación en segundo plano. */
+export const CLAVE_TOKEN = 'vecinos.sesion.token';
+
+/** Cuenta sembrada en api-mock; «Entrar sin cuenta» la usa si la API está arriba. */
+const CUENTA_DEMO = { correo: 'ana@vecinos.pe', clave: 'vecinos123' };
+
+/** Perfil local para «Entrar sin cuenta» cuando la API no responde (Plaza de Armas de Trujillo). */
+const PERFIL_DEMO: PerfilVecino = {
+  uid: 'u00',
+  nombre: 'Ana Morales',
+  correo: CUENTA_DEMO.correo,
+  telefono: '+51987654321',
+  barrio: 'Barrio Los Olivos',
+  oficios: ['tecnologia', 'clases-tutorias'],
+  fotoUrl: null,
+  necesidadActivaId: null,
+  ubicacion: { lat: -8.1116, lng: -79.0288 },
+  ubicacionEn: null,
+};
 
 const SesionContext = createContext<EstadoSesion | null>(null);
 
-const aUsuarioSesion = (u: UsuarioApi): UsuarioSesion => ({ uid: u.id, displayName: u.nombre, email: u.correo });
+const esOficio = (valor: string): valor is OficioId => valor in OFICIOS;
 
-/** SecureStore puede fallar (web, almacenamiento bloqueado); la sesión sigue en memoria igual. */
+/**
+ * @description Convierte el usuario de la API al perfil de la app, descartando oficios fuera del catálogo (RN-03).
+ */
+function aPerfil(u: UsuarioApi): PerfilVecino {
+  return {
+    uid: u.id,
+    nombre: u.nombre,
+    correo: u.correo,
+    telefono: u.telefono ?? null,
+    barrio: u.barrio ?? null,
+    oficios: (u.oficios ?? []).filter(esOficio),
+    fotoUrl: u.fotoUrl ?? null,
+    necesidadActivaId: u.necesidadActivaId ?? null,
+    ubicacion: u.ubicacion ?? null,
+    ubicacionEn: u.ubicacionEn ?? null,
+  };
+}
+
+const aUsuario = (p: PerfilVecino): UsuarioSesion => ({ uid: p.uid, displayName: p.nombre, email: p.correo });
+
+/**
+ * @description Guarda o borra el token; SecureStore puede fallar (web, almacenamiento bloqueado) y la sesión sigue en memoria.
+ */
 async function guardarToken(token: string | null): Promise<void> {
   try {
     if (token) await SecureStore.setItemAsync(CLAVE_TOKEN, token);
@@ -47,10 +84,10 @@ async function guardarToken(token: string | null): Promise<void> {
 }
 
 /**
- * @description Expone el usuario de la sesión (hoy de la API simulada) y un modo de desarrollo para entrar sin cuenta.
+ * @description Expone el usuario y el perfil de la sesión (hoy de la API simulada) y un modo de desarrollo para entrar sin cuenta.
  */
 export function SesionProvider({ children }: { children: ReactNode }) {
-  const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
+  const [perfil, setPerfil] = useState<PerfilVecino | null>(null);
   const [cargando, setCargando] = useState(true);
   const [modoDesarrollo, setModoDesarrollo] = useState(false);
 
@@ -62,11 +99,14 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         const token = await SecureStore.getItemAsync(CLAVE_TOKEN).catch(() => null);
         if (!token) return;
         fijarToken(token);
-        const yo = await api<UsuarioApi>('/auth/yo');
-        if (vigente) setUsuario(aUsuarioSesion(yo));
-      } catch {
-        fijarToken(null);
-        await guardarToken(null);
+        const yo = await api<UsuarioApi>('/vecinos/yo');
+        if (vigente) setPerfil(aPerfil(yo));
+      } catch (error) {
+        // Sin conexión se conserva el token para reintentar al volver; un 401 lo invalida.
+        if (error instanceof ErrorApi && error.estado === 401) {
+          fijarToken(null);
+          await guardarToken(null);
+        }
       } finally {
         if (vigente) setCargando(false);
       }
@@ -76,37 +116,114 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const ingresar = useCallback(async (correo: string, clave: string) => {
-    const { token, usuario: u } = await api<{ token: string; usuario: UsuarioApi }>('/auth/ingresar', {
-      metodo: 'POST',
-      cuerpo: { correo, clave },
-    });
+  const abrir = useCallback(async (token: string, u: UsuarioApi) => {
     fijarToken(token);
     await guardarToken(token);
-    setUsuario(aUsuarioSesion(u));
+    setPerfil(aPerfil(u));
   }, []);
+
+  const ingresar = useCallback(
+    async (correo: string, clave: string) => {
+      const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/ingresar', {
+        metodo: 'POST',
+        cuerpo: { correo: correo.trim().toLowerCase(), clave },
+      });
+      await abrir(token, usuario);
+    },
+    [abrir],
+  );
+
+  const registrar = useCallback(
+    async ({ nombre, correo, telefono, clave }: DatosRegistro) => {
+      const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/registro', {
+        metodo: 'POST',
+        cuerpo: { nombre: nombre.trim(), correo: correo.trim().toLowerCase(), telefono: `+51${telefono}`, clave },
+      });
+      await abrir(token, usuario);
+    },
+    [abrir],
+  );
 
   const salir = useCallback(async () => {
     await api('/auth/salir', { metodo: 'POST' }).catch(() => undefined);
     fijarToken(null);
     await guardarToken(null);
-    setUsuario(null);
+    setPerfil(null);
+    setModoDesarrollo(false);
   }, []);
+
+  const recargarPerfil = useCallback(async () => {
+    if (modoDesarrollo && !perfil) return;
+    const yo = await api<UsuarioApi>('/vecinos/yo');
+    setPerfil(aPerfil(yo));
+  }, [modoDesarrollo, perfil]);
+
+  const actualizarPerfil = useCallback(
+    async (cambios: CambiosPerfil) => {
+      try {
+        const yo = await api<UsuarioApi>('/vecinos/yo', { metodo: 'PATCH', cuerpo: cambios });
+        setPerfil(aPerfil(yo));
+      } catch (error) {
+        // En modo desarrollo sin API, el cambio se guarda solo en memoria para poder probar las pantallas.
+        if (modoDesarrollo && error instanceof ErrorApi && (error.codigo === 'SIN_CONEXION' || error.codigo === 'SIN_SESION')) {
+          setPerfil((actual) => (actual ? { ...actual, ...cambios } : actual));
+          return;
+        }
+        throw error;
+      }
+    },
+    [modoDesarrollo],
+  );
+
+  const fijarUbicacionLocal = useCallback((coordenada: Coordenada) => {
+    setPerfil((actual) => (actual ? { ...actual, ubicacion: coordenada, ubicacionEn: Date.now() } : actual));
+  }, []);
+
+  // «Entrar sin cuenta»: con la API arriba entra como la cuenta sembrada (datos reales del mock);
+  // sin API, abre un perfil local para revisar las pantallas.
+  const entrarModoDesarrollo = useCallback(async () => {
+    if (!__DEV__) return;
+    setModoDesarrollo(true);
+    try {
+      await ingresar(CUENTA_DEMO.correo, CUENTA_DEMO.clave);
+    } catch {
+      setPerfil(PERFIL_DEMO);
+    }
+  }, [ingresar]);
+
+  const salirModoDesarrollo = useCallback(() => {
+    void salir();
+  }, [salir]);
 
   const valor = useMemo<EstadoSesion>(
     () => ({
-      usuario,
+      usuario: perfil ? aUsuario(perfil) : null,
+      perfil,
       cargando,
       modoDesarrollo,
-      autenticado: usuario !== null || modoDesarrollo,
+      autenticado: perfil !== null,
       ingresar,
+      registrar,
       salir,
-      entrarModoDesarrollo: () => {
-        if (__DEV__) setModoDesarrollo(true);
-      },
-      salirModoDesarrollo: () => setModoDesarrollo(false),
+      recargarPerfil,
+      actualizarPerfil,
+      fijarUbicacionLocal,
+      entrarModoDesarrollo,
+      salirModoDesarrollo,
     }),
-    [usuario, cargando, modoDesarrollo, ingresar, salir],
+    [
+      perfil,
+      cargando,
+      modoDesarrollo,
+      ingresar,
+      registrar,
+      salir,
+      recargarPerfil,
+      actualizarPerfil,
+      fijarUbicacionLocal,
+      entrarModoDesarrollo,
+      salirModoDesarrollo,
+    ],
   );
 
   return <SesionContext.Provider value={valor}>{children}</SesionContext.Provider>;
@@ -119,4 +236,11 @@ export function useSesion(): EstadoSesion {
   const contexto = useContext(SesionContext);
   if (!contexto) throw new Error('useSesion debe usarse dentro de SesionProvider');
   return contexto;
+}
+
+/**
+ * @description Atajo para el perfil del vecino con sesión (null sin sesión).
+ */
+export function usePerfil(): PerfilVecino | null {
+  return useSesion().perfil;
 }

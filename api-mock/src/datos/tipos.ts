@@ -18,6 +18,14 @@ export interface Usuario {
   necesidadActivaId: string | null;
   ubicacion: Coordenada;
   creadoEn: number;
+  // --- cuentas (Persona A): opcionales para no tocar las semillas ---
+  /** E.164 (+51 y 9 dígitos que empiezan en 9). Único entre perfiles (RN-01); identidad en los SMS (RN-19). */
+  telefono?: string | null;
+  fotoUrl?: string | null;
+  /** Momento de la última ubicación validada (RF42). */
+  ubicacionEn?: number | null;
+  /** RF42: true si la ubicación se marcó moviendo el pin. */
+  ubicacionManual?: boolean;
 }
 
 // --- favores (P04, RF09) ---
