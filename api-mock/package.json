@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "tsx watch src/servidor.ts",
     "start": "tsx src/servidor.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/modulos/favores/__tests__/reglas.test.ts"
   },
   "engines": {
     "node": ">=22"

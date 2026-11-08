@@ -6,14 +6,14 @@
 // FlatList (virtualizada, con deslizar para refrescar) cuyo encabezado lleva saludo, accesos y acciones.
 // El encabezado con «SOS» y la barra de pestañas los ponen los layouts de (privado) y (pestanas).
 import { Boton, FranjaSinConexion, ListaVacia } from "@/compartido/ui";
-import { ESPACIO, useTema } from "@/compartido/tema";
+import { ESPACIO, useTema, useTemaStore } from "@/compartido/tema";
 import { formatearHace, primerNombre } from "@/compartido/utilidades/formatos";
 import { usePendientesBandeja } from "@/nucleo/bandeja-salida";
 import { abrirAjustesNotificaciones, usePermisoNotificaciones } from "@/nucleo/notificaciones";
 import { useConexion } from "@/nucleo/red";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, View, type ListRenderItem } from "react-native";
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem } from "react-native";
 import { AccesosRapidos, type AccesoRapido } from "../componentes/AccesosRapidos";
 import { AvisoNotificaciones } from "../componentes/AvisoNotificaciones";
 import { CabeceraMuro } from "../componentes/CabeceraMuro";
@@ -21,13 +21,14 @@ import { SaludoInicio } from "../componentes/SaludoInicio";
 import { TarjetaMiPublicacion } from "../componentes/TarjetaMiPublicacion";
 import { TarjetaMuro } from "../componentes/TarjetaMuro";
 import { TEXTOS_INICIO } from "../constantes";
+import { hrefDetalleFavor } from "../rutas";
 import { useMiPublicacion } from "../hooks/useMiPublicacion";
 import { useMuro } from "../hooks/useMuro";
 import { useVecinoActual } from "../hooks/useVecinoActual";
 import { puedeCrearPublicacion } from "../reglas";
-import type { ElementoMuro } from "../tipos";
+import type { ElementoMuro, PublicacionConAutor } from "../tipos";
 
-/** Destinos que aún no existen (P05, P06, P08, P20, P21). Se reemplazan por router.push al crearlos. */
+/** Destinos ajenos al módulo Favores que siguen pendientes. */
 function avisarProximamente(pantalla: string) {
   Alert.alert("Próximamente", `${pantalla} todavía no está disponible.`);
 }
@@ -36,16 +37,22 @@ export function InicioPantalla() {
   const { colores } = useTema();
   const router = useRouter();
   const vecino = useVecinoActual();
+  const emergenciaActiva = useTemaStore((estado) => estado.nombre === "emergencia");
   const { sinConexion } = useConexion();
   const pendientes = usePendientesBandeja();
   const permiso = usePermisoNotificaciones();
 
-  const { elementos, cargando, refrescando, refrescar, filtro, setFiltro, actualizadoEn, ahora } = useMuro({
+  const { elementos, cargando, refrescando, refrescar, filtro, setFiltro, actualizadoEn, ahora, error: errorMuro } = useMuro({
     uid: vecino.uid,
     oficios: vecino.oficios,
     centro: vecino.ubicacion,
   });
-  const miPublicacion = useMiPublicacion(vecino.necesidadActivaId);
+  const { publicacion: miNecesidad, error: errorNecesidad } = useMiPublicacion(vecino.necesidadActivaId);
+  const { publicacion: miServicio, error: errorServicio } = useMiPublicacion(vecino.servicioActivoId);
+  const misPublicaciones = [miNecesidad, miServicio].filter(
+    (publicacion, indice, lista): publicacion is PublicacionConAutor =>
+      publicacion !== null && lista.findIndex((otra) => otra?.id === publicacion.id) === indice,
+  );
   const crear = puedeCrearPublicacion(vecino.necesidadActivaId);
 
   const accesos: AccesoRapido[] = useMemo(
@@ -58,7 +65,7 @@ export function InicioPantalla() {
     [router],
   );
 
-  const verDetalle = useCallback((_id: string) => avisarProximamente("El detalle de la publicación"), []);
+  const verDetalle = useCallback((id: string) => router.push(hrefDetalleFavor(id)), [router]);
 
   const renderItem: ListRenderItem<ElementoMuro> = useCallback(
     ({ item }) => <TarjetaMuro elemento={item} ahora={ahora} onVer={verDetalle} />,
@@ -73,20 +80,32 @@ export function InicioPantalla() {
       <SaludoInicio nombre={primerNombre(vecino.nombre)} onAyuda={() => avisarProximamente("La guía de ayuda")} />
 
       {permiso === "denegado" ? <AvisoNotificaciones onIrAjustes={abrirAjustesNotificaciones} /> : null}
+      {vecino.error || errorMuro || errorNecesidad || errorServicio ? (
+        <View accessibilityRole="alert" style={[styles.error, { backgroundColor: colores.sosFondo, borderColor: colores.borde }]}>
+          <Text style={[styles.errorTexto, { color: colores.texto }]}>
+            {vecino.error ?? errorMuro ?? errorNecesidad ?? errorServicio}
+          </Text>
+        </View>
+      ) : null}
 
       <AccesosRapidos accesos={accesos} />
 
-      {miPublicacion ? (
-        <TarjetaMiPublicacion publicacion={miPublicacion} ahora={ahora} onVer={() => avisarProximamente("Tu favor")} />
-      ) : null}
+      {misPublicaciones.map((publicacion) => (
+        <TarjetaMiPublicacion
+          key={publicacion.id}
+          publicacion={publicacion}
+          ahora={ahora}
+          onVer={() => router.push(hrefDetalleFavor(publicacion.id))}
+        />
+      ))}
 
       <View style={styles.acciones}>
         <Boton
           texto={TEXTOS_INICIO.crearPublicacion}
           icono="add"
-          onPress={() => avisarProximamente("Crear publicación")}
-          deshabilitado={!crear.permitido}
-          motivoDeshabilitado={crear.motivo ?? undefined}
+          onPress={() => router.push("/favores/publicar")}
+          deshabilitado={!crear.permitido || emergenciaActiva}
+          motivoDeshabilitado={emergenciaActiva ? "No se pueden crear publicaciones nuevas durante una emergencia." : crear.motivo ?? undefined}
         />
         <Boton
           texto={TEXTOS_INICIO.reportarVulnerabilidad}
@@ -111,6 +130,8 @@ export function InicioPantalla() {
         ListEmptyComponent={
           cargando ? (
             <ActivityIndicator color={colores.primario} style={styles.cargando} accessibilityLabel="Cargando el muro" />
+          ) : errorMuro ? (
+            <ListaVacia texto="No se pudo cargar el muro. Revisa tu conexión e inténtalo de nuevo." />
           ) : (
             // Sin botón secundario: el primario «Crear publicación» sigue a la vista (decisión 5).
             <ListaVacia texto={TEXTOS_INICIO.vacio} />
@@ -143,4 +164,6 @@ const styles = StyleSheet.create({
   acciones: { gap: ESPACIO.xs, marginTop: ESPACIO.xs },
   separador: { height: ESPACIO.m },
   cargando: { marginTop: ESPACIO.xl },
+  error: { borderWidth: 1, borderRadius: 12, padding: ESPACIO.m },
+  errorTexto: { fontSize: 14, lineHeight: 20 },
 });

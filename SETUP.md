@@ -102,6 +102,25 @@ Con el cable conectado, `adb reverse tcp:8081 tcp:8081` y abran la app en el cel
 
 Solo hay que volver a `npx expo prebuild --clean` + `npx expo run:android` cuando cambian **dependencias nativas, permisos o plugins** (`app.config.ts`). La persona A avisa en el grupo cuando eso pase.
 
+### Pruebas del módulo Favores (Expo Web)
+
+El mock se inicia en un terminal separado y la app en otro:
+
+```powershell
+Set-Location .\api-mock
+npm install
+npm run dev
+```
+
+```powershell
+Set-Location .\movil
+$env:EXPO_PUBLIC_FAVORES_BACKEND = "mock"
+$env:EXPO_PUBLIC_API_URL = "http://localhost:3000/api/v1"
+npx expo start --web
+```
+
+Usa `ana@vecinos.pe` y `rosa@vecinos.pe` (clave `vecinos123`) para el flujo entre dos cuentas. Si pruebas en un celular, reemplaza `localhost` por la IPv4 de la computadora. La guía para integrar Firebase está en [api-mock/README.md](api-mock/README.md#cambio-futuro-a-firebase); Firebase aún requiere coordinar la autenticación con la persona A y no se activa con solo cambiar una variable.
+
 ## 6. Huellas SHA para el inicio de sesión con Google
 
 Cada computadora tiene su propia firma de depuración. Sin registrarla, el login con Google falla en ese celular.

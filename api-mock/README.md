@@ -28,6 +28,37 @@ EXPO_PUBLIC_API_URL=http://192.168.1.20:3000/api/v1 npx expo start
 
 El celular y la computadora deben estar en la misma red Wi-Fi.
 
+### Probar Favores en Expo Web
+
+Abre dos terminales desde la raíz del repositorio. En la primera:
+
+```powershell
+Set-Location .\api-mock
+npm install
+npm run dev
+```
+
+En la segunda, para probar en el navegador de la misma computadora:
+
+```powershell
+Set-Location .\movil
+$env:EXPO_PUBLIC_FAVORES_BACKEND = "mock"
+$env:EXPO_PUBLIC_API_URL = "http://localhost:3000/api/v1"
+npx expo start --web
+```
+
+Si pruebas en un celular físico, cambia `localhost` por la IPv4 de la computadora que muestra la consola de la API. El celular y la computadora deben estar en la misma red. La API y las sesiones son en memoria: reiniciar el servidor restablece los datos.
+
+Usa `ana@vecinos.pe` y `rosa@vecinos.pe` con la clave `vecinos123` para probar el flujo con dos cuentas. Las cuentas de demostración tienen identidad `PENDIENTE`, suficiente para aceptar favores según RN-18; esto no equivale a una verificación real.
+
+### Cambio futuro a Firebase
+
+El proveedor `mock` es el único operativo. `EXPO_PUBLIC_FAVORES_BACKEND=mock` es también el valor predeterminado. Cambiarlo a `firebase` **no conecta Firebase**: la app muestra un error explícito hasta coordinar con la persona A la autenticación Firebase, el contrato de Cloud Functions, las reglas e índices de Firestore y el proveedor Firebase del módulo. No se debe enviar el UID de una sesión mock a Functions ni abrir datos con reglas públicas. Cuando esa integración esté lista, se implementará y probará el proveedor antes de cambiar esta variable.
+
+### Alcance del mock
+
+Las actualizaciones del muro, el detalle y los avisos se consultan por sondeo mientras la app está abierta. La ubicación del prestador se comparte en primer plano cada 10 s o 50 m durante `ACEPTADA` / `EN_SITIO`; el seguimiento en segundo plano y las notificaciones push reales aún requieren la integración nativa. En Web el mapa es un marcador de disponibilidad y se muestran las coordenadas; el mapa interactivo es Android.
+
 ## Endpoints
 
 Todas las rutas van bajo `/api/v1` y, salvo `auth/registro` y `auth/ingresar`, piden `Authorization: Bearer <token>`. Los errores responden `{ "error": "CODIGO", "mensaje": "…" }`.
@@ -40,11 +71,22 @@ Todas las rutas van bajo `/api/v1` y, salvo `auth/registro` y `auth/ingresar`, p
 | GET | `/auth/yo` | Usuario de la sesión |
 | POST | `/auth/salir` | Cierra la sesión |
 | GET · PATCH | `/vecinos/yo` | Perfil; el PATCH acepta `nombre`, `barrio` y `oficios` |
-| GET | `/favores/publicaciones?estado=` | Muro (P04); el filtro por distancia lo hace la app |
-| GET | `/favores/publicaciones/:id` | Una publicación |
-| POST | `/favores/publicaciones` | `{ tipo, categoria, descripcion, oficioId?, lat?, lng? }`; RN-04: una necesidad activa |
-| POST | `/favores/publicaciones/:id/aceptar` | «Yo te ayudo» → ACEPTADA |
-| POST | `/favores/publicaciones/:id/cancelar` | Cancela la propia y libera RN-04 |
+| GET | `/favores/publicaciones?estado=` | Muro (P04); filtra distancia, vigencia y oficio en la app |
+| GET | `/favores/mis-publicaciones` | Publicaciones propias y favores en que participas |
+| GET | `/favores/publicaciones/:id` | Detalle, perfiles públicos y ubicación privada solo para participantes autorizados |
+| POST | `/favores/publicaciones` | `{ tipo, categoria, descripcion, oficioId, lat, lng, devolucionEn? }`; límite RN-04 |
+| POST | `/favores/publicaciones/:id/aceptar` | `{ etaMinutos: 5\|10\|15 }` → ACEPTADA |
+| POST | `/favores/publicaciones/:id/llegada` | El prestador indica que llegó |
+| POST | `/favores/publicaciones/:id/confirmar-llegada` | El solicitante inicia el servicio |
+| POST | `/favores/publicaciones/:id/aun-no-llega` | El solicitante rechaza la llegada |
+| POST | `/favores/publicaciones/:id/solicitar-fin` | Cualquiera de los participantes solicita el cierre |
+| POST | `/favores/publicaciones/:id/rechazar-fin` · `/confirmar-fin` | Rechazo o confirmación del cierre |
+| POST | `/favores/publicaciones/:id/cancelar` · `/desistir` | Cancela la publicación o desiste antes de la llegada |
+| POST | `/favores/publicaciones/:id/registrar-devolucion` | Registra la devolución de un préstamo |
+| POST | `/favores/publicaciones/:id/ubicacion-prestador` | Comparte ubicación en ruta, solo con el solicitante y antes de iniciar el servicio |
+| POST | `/favores/publicaciones/:id/calificar` | `{ estrellas: 1..5 }`; una calificación por participante |
+| GET | `/favores/notificaciones` | Avisos de favores de la sesión |
+| PATCH | `/favores/notificaciones/:id/leida` | Marca un aviso como leído |
 | GET · POST | `/directorio` | Economía local (`?tipo=oficio\|servicio\|comercio`) |
 | GET | `/directorio/:id` | Un servicio |
 | POST | `/directorio/:id/visto-bueno` | Suma un visto bueno |
