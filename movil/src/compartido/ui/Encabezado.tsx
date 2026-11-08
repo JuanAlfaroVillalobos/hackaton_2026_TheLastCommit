@@ -2,9 +2,11 @@
 // Encabezado de la app (README, sección 7): casa + «Vecinos» + barrio a la izquierda y, a la derecha,
 // lo que pase el layout (el botón «SOS» del módulo emergencia). El icono de clima va junto al nombre,
 // no en lugar de la casa (diseño P04, decisión 7), para que el tema no dependa solo del color (RNF03).
+// Mantener pulsado el título abre el menú oculto de demo del tema (B6).
 import { ESPACIO, MAX_ESCALA_FUENTE, TIPO, useTema } from "@/compartido/tema";
-import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { MenuDemoTema } from "@/compartido/tema/MenuDemoTema";
+import { useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icono } from "./Icono";
 
@@ -18,10 +20,18 @@ const ETIQUETA_CLIMA = { rainy: "Tema de lluvia", thermostat: "Tema de calor", w
 export function Encabezado({ barrio, derecha }: Props) {
   const { colores, iconoClima } = useTema();
   const insets = useSafeAreaInsets();
+  const [menuDemo, setMenuDemo] = useState(false);
 
   return (
     <View style={[styles.raiz, { paddingTop: insets.top + ESPACIO.s, backgroundColor: colores.fondo }]}>
-      <View style={styles.marca} accessible accessibilityRole="header" accessibilityLabel={`Vecinos${barrio ? `, ${barrio}` : ""}`}>
+      <Pressable
+        style={styles.marca}
+        onLongPress={() => setMenuDemo(true)}
+        delayLongPress={1500}
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={`Vecinos${barrio ? `, ${barrio}` : ""}`}
+      >
         <Icono nombre="home" color={colores.primario} tamano={36} />
         <View style={styles.textos}>
           <View style={styles.fila}>
@@ -44,8 +54,9 @@ export function Encabezado({ barrio, derecha }: Props) {
             </Text>
           ) : null}
         </View>
-      </View>
+      </Pressable>
       {derecha}
+      <MenuDemoTema visible={menuDemo} onCerrar={() => setMenuDemo(false)} />
     </View>
   );
 }

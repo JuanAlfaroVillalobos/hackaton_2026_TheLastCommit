@@ -11,8 +11,13 @@ import type { EstadoPermiso } from './tipos';
  */
 export async function leerPermisoNotificaciones(): Promise<EstadoPermiso> {
   if (Platform.OS !== 'android') return 'concedido';
-  const ajustes = await notifee.getNotificationSettings().catch(() => null);
-  return ajustes?.authorizationStatus === AuthorizationStatus.AUTHORIZED ? 'concedido' : 'denegado';
+  try {
+    const ajustes = await notifee.getNotificationSettings();
+    return ajustes.authorizationStatus === AuthorizationStatus.AUTHORIZED ? 'concedido' : 'denegado';
+  } catch {
+    // Sin módulo nativo (Expo Go): no hay nada que pedir, no se muestra el aviso.
+    return 'concedido';
+  }
 }
 
 /**
@@ -20,8 +25,13 @@ export async function leerPermisoNotificaciones(): Promise<EstadoPermiso> {
  */
 export async function pedirPermisoNotificaciones(): Promise<EstadoPermiso> {
   if (Platform.OS !== 'android') return 'concedido';
-  const ajustes = await notifee.requestPermission().catch(() => null);
-  return ajustes?.authorizationStatus === AuthorizationStatus.AUTHORIZED ? 'concedido' : 'denegado';
+  try {
+    const ajustes = await notifee.requestPermission();
+    return ajustes.authorizationStatus === AuthorizationStatus.AUTHORIZED ? 'concedido' : 'denegado';
+  } catch {
+    // Sin módulo nativo (Expo Go).
+    return 'concedido';
+  }
 }
 
 /**
@@ -51,7 +61,11 @@ export function usePermisoNotificaciones(): EstadoPermiso {
  */
 export async function abrirAjustesNotificaciones(): Promise<void> {
   if (Platform.OS === 'android') {
-    await notifee.openNotificationSettings().catch(() => Linking.openSettings());
+    try {
+      await notifee.openNotificationSettings();
+    } catch {
+      await Linking.openSettings();
+    }
     return;
   }
   await Linking.openSettings();

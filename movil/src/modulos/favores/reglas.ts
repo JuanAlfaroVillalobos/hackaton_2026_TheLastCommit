@@ -28,7 +28,7 @@ type ContextoMuro = {
 
 /**
  * RF09: `PUBLICADA`, no vencidas, sin las mías y dentro del radio; luego el filtro por tipo (RF35).
- * Orden: (1) coinciden con mis oficios, (2) distancia ascendente, (3) más recientes.
+ * Orden: las más recientes primero (por orden de llegada). «Coincide con tu oficio» sigue marcándose en la tarjeta.
  */
 export function prepararMuro(publicaciones: PublicacionConAutor[], ctx: ContextoMuro): ElementoMuro[] {
   const radio = ctx.radioM ?? RADIO_MURO_M;
@@ -41,12 +41,7 @@ export function prepararMuro(publicaciones: PublicacionConAutor[], ctx: Contexto
       coincideConOficio: coincideConOficio(p, ctx.oficios),
     }))
     .filter((p) => p.distanciaM <= radio)
-    .sort(
-      (a, b) =>
-        Number(b.coincideConOficio) - Number(a.coincideConOficio) ||
-        a.distanciaM - b.distanciaM ||
-        b.creadoEn - a.creadoEn,
-    );
+    .sort((a, b) => b.creadoEn - a.creadoEn || a.distanciaM - b.distanciaM);
 }
 
 /** RN-09: bloques de 30 minutos, con mínimo 1 y máximo de 8 horas por servicio. */

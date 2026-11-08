@@ -84,7 +84,16 @@ export default function CompletarPerfilPantalla() {
           'Te faltan permisos importantes',
           `Sin ${faltan.map((p) => p.titulo.toLowerCase()).join(' ni ')} no podremos avisarte de ayuda ni de emergencias cerca de ti.`,
           [
-            { text: 'Activarlos ahora', style: 'cancel' },
+            {
+              text: 'Activarlos ahora',
+              style: 'cancel',
+              // Pide uno por uno los permisos importantes que faltan (ubicación y notificaciones).
+              onPress: () => {
+                void (async () => {
+                  for (const permiso of faltan) await pedir(permiso.id);
+                })();
+              },
+            },
             { text: 'Continuar igual', onPress: () => router.back() },
           ],
         );

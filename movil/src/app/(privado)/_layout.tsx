@@ -1,3 +1,4 @@
+import { useCalleActual } from '@/compartido/hooks/useCalle';
 import { useTema } from '@/compartido/tema';
 import { Encabezado } from '@/compartido/ui';
 import { BotonSos } from '@/modulos/emergencia';
@@ -5,12 +6,13 @@ import { useVecinoActual } from '@/modulos/favores';
 import { Stack } from 'expo-router';
 
 /**
- * @description Encabezado de la sección 7: casa + «Vecinos» + barrio y el botón «SOS» (RF20).
+ * @description Encabezado de la sección 7: casa + «Vecinos» + calle actual (o el barrio si no se puede leer) y el botón «SOS» (RF20).
  * El barrio sale de un adaptador temporal de favores hasta que el perfil (A) lo exponga.
  */
 function EncabezadoPrivado() {
-  const { barrio } = useVecinoActual();
-  return <Encabezado barrio={barrio} derecha={<BotonSos />} />;
+  const { barrio, ubicacion } = useVecinoActual();
+  const calle = useCalleActual(ubicacion);
+  return <Encabezado barrio={calle ?? barrio} derecha={<BotonSos />} />;
 }
 
 /**

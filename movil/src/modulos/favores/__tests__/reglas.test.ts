@@ -60,14 +60,13 @@ describe("prepararMuro (RF09)", () => {
     expect(prepararMuro(lista, ctx).map((e) => e.id)).toEqual(["ok"]);
   });
 
-  it("ordena: primero mis oficios, luego distancia y luego la más reciente", () => {
+  it("ordena por orden de llegada: las más recientes primero", () => {
     const lista = [
-      pub({ id: "cerca-vieja", geohash: gh(200), creadoEn: AHORA - 50 * MIN }),
-      pub({ id: "cerca-nueva", geohash: gh(200), creadoEn: AHORA - 5 * MIN }),
-      pub({ id: "lejos", geohash: gh(2000) }),
-      pub({ id: "mi-oficio-lejos", geohash: gh(2500), oficioId: "tecnologia" }),
+      pub({ id: "vieja", geohash: gh(200), creadoEn: AHORA - 50 * MIN }),
+      pub({ id: "nueva", geohash: gh(2500), creadoEn: AHORA - 5 * MIN }),
+      pub({ id: "media", geohash: gh(200), oficioId: "tecnologia", creadoEn: AHORA - 20 * MIN }),
     ];
-    expect(prepararMuro(lista, ctx).map((e) => e.id)).toEqual(["mi-oficio-lejos", "cerca-nueva", "cerca-vieja", "lejos"]);
+    expect(prepararMuro(lista, ctx).map((e) => e.id)).toEqual(["nueva", "media", "vieja"]);
   });
 
   it("filtra por tipo (RF35)", () => {
