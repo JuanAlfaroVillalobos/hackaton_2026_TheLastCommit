@@ -7,7 +7,7 @@ import { Icono, type NombreIcono } from "@/compartido/ui";
 import { quitarNotificacion } from "@/nucleo/notificaciones";
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { refrescarEmergencia, responder, useEmergencia, useEmergenciaStore } from "../estado";
 import { ID_NOTIFICACION_ALERTA } from "../notificaciones";
@@ -48,7 +48,9 @@ export function AlertaEmergenciaPantalla({ onVerMapa, onSalir }: Props) {
       if (useEmergenciaStore.getState().emergencia) onVerMapa();
       else onSalir(); // con el último «Estoy bien» la emergencia terminó (RF25)
     } catch (error) {
-      Alert.alert("No se pudo enviar", error instanceof Error ? error.message : "Inténtalo de nuevo.");
+      const mensaje = error instanceof Error ? error.message : "Inténtalo de nuevo.";
+      if (Platform.OS === "web") window.alert(`No se pudo enviar. ${mensaje}`);
+      else Alert.alert("No se pudo enviar", mensaje);
     } finally {
       setEnviando(null);
     }
