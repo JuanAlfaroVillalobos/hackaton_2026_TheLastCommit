@@ -8,6 +8,7 @@ import type { Usuario } from '../../datos/tipos.js';
 import { abrirSesion, cerrarSesion, leerToken, requiereSesion } from '../../nucleo/autenticacion.js';
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
 import { nuevoId, texto } from '../../nucleo/utilidades.js';
+import { exigirTelefonoLibre, normalizarTelefono, validarClave } from './validaciones.js';
 
 export type UsuarioPublico = Omit<Usuario, 'clave'>;
 
@@ -21,9 +22,16 @@ rutasAuth.post('/registro', async (req, res) => {
   const correo = texto(req.body?.correo)?.toLowerCase();
   const clave = texto(req.body?.clave);
   const nombre = texto(req.body?.nombre);
+  const telefono = normalizarTelefono(req.body?.telefono);
   if (!correo || !clave || !nombre) throw datosInvalidos('Envía correo, clave y nombre.');
-  if (clave.length < 6) throw datosInvalidos('La clave debe tener al menos 6 caracteres.');
-  if ((await almacen.usuarios.listar({ correo })).length) throw conflicto('Ese correo ya tiene una cuenta.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) throw datosInvalidos('Escribe un correo válido.');
+  if (nombre.length < 2 || nombre.length > 60) throw datosInvalidos('El nombre debe tener de 2 a 60 caracteres.');
+  if (!telefono) throw datosInvalidos('Escribe un celular peruano de 9 dígitos que empiece en 9.');
+  validarClave(clave);
+  if ((await almacen.usuarios.listar({ correo })).length) {
+    throw conflicto('Ya existe una cuenta con ese correo. Inicia sesión.');
+  }
+  await exigirTelefonoLibre(telefono);
 
   const usuario = await almacen.usuarios.crear({
     id: nuevoId('u'),
@@ -35,6 +43,9 @@ rutasAuth.post('/registro', async (req, res) => {
     necesidadActivaId: null,
     ubicacion: ZONA_DEMO,
     creadoEn: Date.now(),
+    telefono,
+    fotoUrl: null,
+    ubicacionEn: null,
   });
   res.status(201).json({ token: abrirSesion(usuario.id), usuario: aPublico(usuario) });
 });

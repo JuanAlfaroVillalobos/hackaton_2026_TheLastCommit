@@ -1,5 +1,6 @@
 import { ESPACIO, MAX_ESCALA_FUENTE, RADIO, TIPO, useTema } from '@/compartido/tema';
 import { Boton, Chip, Icono, Tarjeta, type NombreIcono } from '@/compartido/ui';
+import { OFICIOS } from '@/compartido/constantes/oficios';
 import { useSesion } from '@/nucleo/sesion';
 import { router } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -60,20 +61,17 @@ function Contador({ valor, etiqueta }: { valor: string; etiqueta: string }) {
 }
 
 /**
- * @description Mi perfil (P10, RF05, RF06, RF17), según el diseño del equipo. Los datos reales del perfil llegan en A2 y A3.
+ * @description Mi perfil (P10, RF05, RF06, RF17), según el diseño del equipo. Lee el perfil real de la sesión (GET /vecinos/yo).
  */
 export default function PerfilPantalla() {
   const { colores } = useTema();
-  const { usuario, modoDesarrollo, salirModoDesarrollo, salir } = useSesion();
+  const { perfil, modoDesarrollo, salir } = useSesion();
 
-  const nombre = usuario?.displayName ?? (modoDesarrollo ? 'Vecino de prueba' : 'Vecino');
-  const detalle = usuario?.email ?? 'Barrio Los Olivos';
+  const nombre = perfil?.nombre ?? 'Vecino';
+  const detalle = [perfil?.barrio, perfil?.telefono].filter(Boolean).join(' · ') || perfil?.correo || '';
+  const oficios = perfil?.oficios ?? [];
 
   const cerrarSesion = () => {
-    if (modoDesarrollo) {
-      salirModoDesarrollo();
-      return;
-    }
     salir().catch(() => Alert.alert('Cerrar sesión', 'No se pudo cerrar la sesión. Inténtalo de nuevo.'));
   };
 
@@ -92,6 +90,23 @@ export default function PerfilPantalla() {
           </Text>
           {modoDesarrollo ? <Chip texto="Perfil de demostración" variante="neutro" /> : null}
         </View>
+      </View>
+
+      <View style={styles.seccion}>
+        <Text style={[TIPO.seccion, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+          Mis oficios
+        </Text>
+        {oficios.length > 0 ? (
+          <View style={styles.chips}>
+            {oficios.map((o) => (
+              <Chip key={o} texto={OFICIOS[o]} variante="marca" />
+            ))}
+          </View>
+        ) : (
+          <Text style={[TIPO.pequeno, { color: colores.textoSecundario }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+            Aún no elegiste oficios. Agrégalos en «Completar perfil» para ver primero lo que sabes hacer.
+          </Text>
+        )}
       </View>
 
       <View style={styles.seccion}>
@@ -164,4 +179,5 @@ const styles = StyleSheet.create({
   fila: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.m },
   iconoFila: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   textosFila: { flex: 1, gap: 2 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: ESPACIO.s },
 });

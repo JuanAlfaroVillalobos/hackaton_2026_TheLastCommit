@@ -1,3 +1,4 @@
+import { OFICIOS, type OficioId } from '@/compartido/constantes/oficios';
 import { ESPACIO, MAX_ESCALA_FUENTE, TIPO, useTema } from '@/compartido/tema';
 import { Boton, Chip, ChipFiltro, Icono, Tarjeta, type NombreIcono } from '@/compartido/ui';
 import { useSesion } from '@/nucleo/sesion';
@@ -8,22 +9,6 @@ import { Avatar } from '../componentes/Avatar';
 import { CajaAviso } from '../componentes/CajaAviso';
 import { Pantalla } from '../componentes/Pantalla';
 import { Titular } from '../componentes/Titular';
-
-// Catálogo de oficios de RN-03. Cuando exista en compartido/constantes, se importa de ahí.
-const OFICIOS = [
-  'Gasfitería',
-  'Electricidad',
-  'Carpintería',
-  'Limpieza',
-  'Cuidado de niños',
-  'Cuidado de adultos mayores',
-  'Mascotas',
-  'Clases y tutorías',
-  'Tecnología',
-  'Mandados y compras',
-  'Primeros auxilios',
-  'Otro',
-] as const;
 
 const MAX_OFICIOS = 5;
 
@@ -36,14 +21,27 @@ const PERMISOS: { icono: NombreIcono; titulo: string; texto: string }[] = [
 ];
 
 /**
- * @description Completar perfil (P03, RF05, RF06, RF08): oficios de 1 a 5, foto y permisos explicados. Por ahora es visual; se guarda en A3.
+ * @description Completar perfil (P03, RF05, RF06, RF08): oficios de 1 a 5, foto y permisos explicados. Los oficios se guardan en el perfil (PATCH /vecinos/yo); foto y permisos llegan en A3.
  */
 export default function CompletarPerfilPantalla() {
   const { colores } = useTema();
-  const { usuario } = useSesion();
-  const [elegidos, setElegidos] = useState<string[]>([]);
+  const { perfil, actualizarPerfil } = useSesion();
+  const [elegidos, setElegidos] = useState<OficioId[]>(() => perfil?.oficios ?? []);
+  const [guardando, setGuardando] = useState(false);
 
-  const alternar = (oficio: string) => {
+  const guardar = async () => {
+    setGuardando(true);
+    try {
+      await actualizarPerfil({ oficios: elegidos });
+      router.back();
+    } catch (error) {
+      Alert.alert('No se guardaron tus oficios', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const alternar = (oficio: OficioId) => {
     setElegidos((actual) => {
       if (actual.includes(oficio)) return actual.filter((o) => o !== oficio);
       if (actual.length >= MAX_OFICIOS) {
@@ -65,7 +63,7 @@ export default function CompletarPerfilPantalla() {
 
       <Tarjeta>
         <View style={styles.foto}>
-          <Avatar nombre={usuario?.displayName ?? 'Vecino'} tamano={64} />
+          <Avatar nombre={perfil?.nombre ?? 'Vecino'} tamano={64} />
           <View style={styles.textos}>
             <Text style={[TIPO.cuerpoFuerte, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
               Foto de perfil
@@ -95,8 +93,13 @@ export default function CompletarPerfilPantalla() {
           </Text>
         </View>
         <View style={styles.chips}>
-          {OFICIOS.map((oficio) => (
-            <ChipFiltro key={oficio} texto={oficio} activo={elegidos.includes(oficio)} onPress={() => alternar(oficio)} />
+          {(Object.keys(OFICIOS) as OficioId[]).map((oficio) => (
+            <ChipFiltro
+              key={oficio}
+              texto={OFICIOS[oficio]}
+              activo={elegidos.includes(oficio)}
+              onPress={() => alternar(oficio)}
+            />
           ))}
         </View>
       </View>
@@ -133,11 +136,11 @@ export default function CompletarPerfilPantalla() {
       />
 
       <Boton
-        texto="Guardar y continuar"
+        texto={guardando ? 'Guardando…' : 'Guardar y continuar'}
         icono="check_circle"
-        deshabilitado={elegidos.length === 0}
-        motivoDeshabilitado="Elige al menos un oficio para continuar."
-        onPress={() => router.back()}
+        deshabilitado={elegidos.length === 0 || guardando}
+        motivoDeshabilitado={elegidos.length === 0 ? 'Elige al menos un oficio para continuar.' : undefined}
+        onPress={guardar}
       />
     </Pantalla>
   );

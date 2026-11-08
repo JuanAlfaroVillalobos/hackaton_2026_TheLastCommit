@@ -1,5 +1,7 @@
 import { ProveedorTema, useTema } from '@/compartido/tema';
 import { SesionProvider, useSesion } from '@/nucleo/sesion';
+// Define la tarea de ubicación en segundo plano antes de montar la app (RF13).
+import '@/nucleo/ubicacion/segundoPlano';
 import { Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
