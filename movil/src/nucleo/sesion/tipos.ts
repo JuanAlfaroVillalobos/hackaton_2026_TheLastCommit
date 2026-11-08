@@ -29,6 +29,8 @@ export interface PerfilVecino {
   estadoIdentidad: EstadoIdentidad;
   /** Puede revisar identidades (equivale al custom claim `validador`). */
   validador: boolean;
+  /** Con Firebase Auth: si ya abrió el enlace de verificación del correo. null en modo local. */
+  correoVerificado: boolean | null;
 }
 
 export type EstadoIdentidad = 'NO_ENVIADA' | 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
@@ -47,6 +49,23 @@ export interface UsuarioApi {
   ubicacionEn?: number | null;
   estadoIdentidad?: EstadoIdentidad;
   validador?: boolean;
+  correoVerificado?: boolean | null;
+}
+
+/** Respuesta de ingresar, registro y restablecer: la sesión y el perfil. */
+export interface RespuestaSesion {
+  token: string;
+  /** Con Firebase Auth: para pedir un token nuevo cuando el actual vence (1 h). null en modo local. */
+  renovacion: string | null;
+  expiraEn: number;
+  usuario: UsuarioApi;
+}
+
+/** Cómo se recupera la clave: código de 6 dígitos (modo local) o enlace por correo (Firebase Auth). */
+export interface ResultadoRecuperacion {
+  modo: 'codigo' | 'enlace';
+  /** Solo en la demo del modo local: el código, porque no hay servidor de correo. */
+  codigoDemo?: string;
 }
 
 export interface DatosRegistro {

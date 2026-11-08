@@ -7,7 +7,7 @@ import type { DatosVerificacion, ResumenIdentidad, SolicitudPendiente } from '..
 export const obtenerMiIdentidad = () => api<ResumenIdentidad>('/identidad/yo');
 
 export const enviarIdentidad = (datos: DatosVerificacion) =>
-  api<ResumenIdentidad>('/identidad/yo', { metodo: 'POST', cuerpo: datos });
+  api<ResumenIdentidad>('/identidad/yo', { metodo: 'POST', cuerpo: datos, tiempoMs: 60_000 });
 
 export const listarPendientes = () => api<{ pendientes: SolicitudPendiente[] }>('/identidad/pendientes');
 

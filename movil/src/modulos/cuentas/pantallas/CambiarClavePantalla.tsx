@@ -20,7 +20,7 @@ type Campo = 'actual' | 'nueva' | 'confirmacion';
  * @description Cambiar clave con la sesión iniciada: pide la actual, la nueva con medidor de fuerza y su confirmación. Cierra las sesiones de otros teléfonos.
  */
 export default function CambiarClavePantalla() {
-  const { perfil } = useSesion();
+  const { perfil, actualizarTokens } = useSesion();
   const [datos, setDatos] = useState<Record<Campo, string>>({ actual: '', nueva: '', confirmacion: '' });
   const [intentado, setIntentado] = useState(false);
   const [errorApi, setErrorApi] = useState<Partial<Record<Campo, string>>>({});
@@ -48,7 +48,9 @@ export default function CambiarClavePantalla() {
     }
     setEnviando(true);
     try {
-      await cambiarClave(datos.actual, datos.nueva);
+      const r = await cambiarClave(datos.actual, datos.nueva);
+      // Con Firebase Auth cambiar la clave cierra todas las sesiones: este teléfono sigue con tokens nuevos.
+      if (r?.token) await actualizarTokens(r.token, r.renovacion ?? null);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       Alert.alert('Clave actualizada', 'Cerramos tu sesión en otros teléfonos. En este sigues conectado.', [
         { text: 'Listo', onPress: () => router.back() },

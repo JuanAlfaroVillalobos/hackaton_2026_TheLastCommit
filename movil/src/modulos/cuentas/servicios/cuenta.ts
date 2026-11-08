@@ -3,10 +3,10 @@
 import { api } from '@/nucleo/api';
 
 /**
- * @description Cambia la clave. La API cierra las sesiones de otros teléfonos y deja abierta la de este.
+ * @description Cambia la clave. La API cierra las sesiones de otros teléfonos; con Firebase Auth devuelve tokens nuevos para este.
  */
 export const cambiarClave = (actual: string, nueva: string) =>
-  api<void>('/auth/cambiar-clave', { metodo: 'POST', cuerpo: { actual, nueva } });
+  api<{ token?: string; renovacion?: string | null }>('/auth/cambiar-clave', { metodo: 'POST', cuerpo: { actual, nueva } });
 
 /**
  * @description Elimina la cuenta, la foto y los datos de identidad. Después hay que cerrar la sesión local.

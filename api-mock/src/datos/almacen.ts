@@ -8,13 +8,19 @@ import { RepositorioMemoria, type Entidad, type Repositorio } from '../nucleo/re
 import { RepositorioFirestore } from '../nucleo/repositorioFirestore.js';
 import * as semillas from './semillas.js';
 import type {
+  AccionProcesada,
+  ArchivoGuardado,
   AlertaEmergencia,
+  CodigoClave,
   ConteoCelda,
   FichaEmergencia,
+  IntentoIngreso,
+  NotificacionBuzon,
   Publicacion,
   RecursoCritico,
   ReporteVulnerabilidad,
   ServicioDirectorio,
+  Sesion,
   Usuario,
   VecinoEmergencia,
 } from './tipos.js';
@@ -24,11 +30,33 @@ export const USA_FIRESTORE = process.env.ALMACEN === 'firestore';
 /** Colecciones que hoy van a Firestore, para el log de arranque. */
 export const COLECCIONES_FIRESTORE: string[] = [];
 
+/** Semillas de las colecciones en Firestore: se crean al arrancar si faltan (ver sembrarFirestore). */
+const SEMILLAS_FIRESTORE: { coleccion: string; repo: Repositorio<Entidad>; semilla: Entidad[] }[] = [];
+
 /** Colección migrada: Firestore con ALMACEN=firestore; si no, memoria con la semilla. */
 function persistente<T extends Entidad>(coleccion: string, semilla: T[] = []): Repositorio<T> {
   if (!USA_FIRESTORE) return new RepositorioMemoria(semilla);
   COLECCIONES_FIRESTORE.push(coleccion);
-  return new RepositorioFirestore<T>(coleccion);
+  const repo = new RepositorioFirestore<T>(coleccion);
+  if (semilla.length) SEMILLAS_FIRESTORE.push({ coleccion, repo: repo as unknown as Repositorio<Entidad>, semilla });
+  return repo;
+}
+
+/**
+ * Crea en Firestore los documentos de las semillas que falten (p. ej. la cuenta de Ana). No toca los
+ * que ya existen, así que no borra lo que hizo el equipo. Se llama una vez al arrancar el servidor.
+ */
+export async function sembrarFirestore(): Promise<number> {
+  let creados = 0;
+  for (const { repo, semilla } of SEMILLAS_FIRESTORE) {
+    for (const fila of semilla) {
+      if (!(await repo.obtener(fila.id))) {
+        await repo.guardar(structuredClone(fila));
+        creados++;
+      }
+    }
+  }
+  return creados;
 }
 
 export const almacen: {
@@ -41,9 +69,14 @@ export const almacen: {
   fichasEmergencia: Repositorio<FichaEmergencia>;
   alertas: Repositorio<AlertaEmergencia>;
   celdas: Repositorio<ConteoCelda>;
+  sesiones: Repositorio<Sesion>;
+  codigosClave: Repositorio<CodigoClave>;
+  intentosIngreso: Repositorio<IntentoIngreso>;
+  notificaciones: Repositorio<NotificacionBuzon>;
+  accionesProcesadas: Repositorio<AccionProcesada>;
+  archivos: Repositorio<ArchivoGuardado>;
 } = {
   // --- en memoria ---
-  usuarios: new RepositorioMemoria(semillas.usuarios),
   publicaciones: new RepositorioMemoria(semillas.publicaciones),
   directorio: new RepositorioMemoria(semillas.directorio),
   vecinosEmergencia: new RepositorioMemoria(semillas.vecinosEmergencia),
@@ -53,4 +86,12 @@ export const almacen: {
   // --- migradas (Firestore con ALMACEN=firestore) ---
   alertas: persistente('alertas', semillas.alertas),
   celdas: persistente('celdas'),
+  // --- cuentas y nucleo (Persona A) ---
+  usuarios: persistente('usuarios', semillas.usuarios),
+  sesiones: persistente('sesiones'),
+  codigosClave: persistente('codigosClave'),
+  intentosIngreso: persistente('intentosIngreso'),
+  notificaciones: persistente('notificaciones'),
+  accionesProcesadas: persistente('accionesProcesadas'),
+  archivos: persistente('archivos'),
 };

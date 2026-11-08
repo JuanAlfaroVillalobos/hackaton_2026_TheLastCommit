@@ -5,7 +5,11 @@ import { crearApp } from './app.js';
 import { COLECCIONES_FIRESTORE } from './datos/almacen.js';
 import { CLAVE_DEMO } from './datos/semillas.js';
 import { ejecutarTareasFavoresMock } from './modulos/favores/rutas.js';
+import { destinoArchivos } from './nucleo/archivos.js';
+import { prepararDatos } from './nucleo/arranque.js';
 import { PROYECTO_FIREBASE } from './nucleo/firebase.js';
+import { destinoAuth } from './nucleo/firebaseAuth.js';
+import { USA_FCM } from './nucleo/notificar.js';
 
 const PUERTO = Number(process.env.PORT ?? 3000);
 const INTERVALO_TAREAS_MS = 60_000;
@@ -15,6 +19,8 @@ const ipsLocales = Object.values(networkInterfaces())
   .flat()
   .filter((red) => red && red.family === 'IPv4' && !red.internal)
   .map((red) => red!.address);
+
+const preparacion = await prepararDatos();
 
 crearApp().listen(PUERTO, '0.0.0.0', () => {
   console.log(`API de Vecinos en http://localhost:${PUERTO}/api/v1`);
@@ -26,8 +32,12 @@ crearApp().listen(PUERTO, '0.0.0.0', () => {
       : `proyecto ${PROYECTO_FIREBASE}`;
     console.log(`  Firestore (${destino}): ${COLECCIONES_FIRESTORE.join(', ')}; el resto en memoria`);
   } else {
-    console.log('  todo en memoria (ALMACEN=firestore en .env para guardar alertas en Firestore)');
+    console.log('  todo en memoria (ALMACEN=firestore en .env para guardar en Firestore)');
   }
+  for (const linea of preparacion) console.log(`  ${linea}`);
+  console.log(`  cuentas: ${destinoAuth()}`);
+  console.log(`  fotos: ${destinoArchivos()} · FCM: ${USA_FCM ? 'activado' : 'apagado (solo buzón)'}`);
+  if (process.env.NODE_ENV !== 'production') console.log(`  datos: http://localhost:${PUERTO}/dev`);
 });
 
 const tareas = setInterval(() => {

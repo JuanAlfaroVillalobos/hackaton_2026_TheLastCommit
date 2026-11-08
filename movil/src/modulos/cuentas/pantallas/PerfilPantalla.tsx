@@ -90,7 +90,8 @@ function Contador({ valor, etiqueta }: { valor: string; etiqueta: string }) {
  */
 export default function PerfilPantalla() {
   const { colores } = useTema();
-  const { perfil, modoDesarrollo, salir, recargarPerfil } = useSesion();
+  const { perfil, modoDesarrollo, salir, recargarPerfil, reenviarVerificacion } = useSesion();
+  const [correoEnviado, setCorreoEnviado] = useState(false);
 
   const nombre = perfil?.nombre ?? 'Vecino';
   const detalle = [perfil?.barrio, perfil?.telefono].filter(Boolean).join(' · ') || perfil?.correo || '';
@@ -192,6 +193,33 @@ export default function PerfilPantalla() {
           {modoDesarrollo ? <Chip texto="Perfil de demostración" variante="neutro" /> : null}
         </View>
       </View>
+
+      {perfil?.correoVerificado === false ? (
+        <View style={[styles.avisoCorreo, { backgroundColor: colores.primarioSuave }]}>
+          <Icono nombre="mark_email_unread" color={colores.primario} tamano={24} />
+          <View style={styles.textosPerfil}>
+            <Text style={[TIPO.cuerpoFuerte, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+              Verifica tu correo
+            </Text>
+            <Text style={[TIPO.pequeno, { color: colores.textoSecundario }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+              {correoEnviado
+                ? `Te enviamos el enlace a ${perfil.correo}. Ábrelo y vuelve a entrar a la app.`
+                : `Abre el enlace que te enviamos a ${perfil.correo} para proteger tu cuenta.`}
+            </Text>
+            {!correoEnviado ? (
+              <Boton
+                texto="Enviar el correo otra vez"
+                variante="enlace"
+                onPress={() =>
+                  void reenviarVerificacion()
+                    .then(() => setCorreoEnviado(true))
+                    .catch((e: unknown) => Alert.alert('No se envió el correo', e instanceof Error ? e.message : 'Inténtalo de nuevo.'))
+                }
+              />
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.seccion}>
         <Text style={[TIPO.seccion, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
@@ -305,6 +333,7 @@ export default function PerfilPantalla() {
 }
 
 const styles = StyleSheet.create({
+  avisoCorreo: { flexDirection: 'row', alignItems: 'flex-start', gap: ESPACIO.m, padding: ESPACIO.m, borderRadius: RADIO.tarjeta },
   tarjetaPerfil: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.l, padding: ESPACIO.l, borderRadius: RADIO.tarjeta },
   textosPerfil: { flex: 1, gap: ESPACIO.xs },
   filaNombre: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.xs },

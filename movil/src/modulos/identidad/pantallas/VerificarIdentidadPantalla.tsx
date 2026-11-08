@@ -131,8 +131,9 @@ export default function VerificarIdentidadPantalla() {
     const foto = await obtenerFoto({
       origen: 'camara',
       camaraFrontal: tipo === 'selfie',
-      ladoMax: 1280,
-      calidad: 0.7,
+      // Cada foto debe pesar menos de 700 KB para guardarse en Firestore.
+      ladoMax: 1024,
+      calidad: 0.6,
     });
     if (!foto) return;
     (tipo === 'fotoDni' ? setFotoDni : setSelfie)({ uri: foto.uri, dataUri: foto.dataUri });
