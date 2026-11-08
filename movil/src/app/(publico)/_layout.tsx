@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 
 /**
- * @description Rutas sin sesión: bienvenida, ingresar y registro.
+ * @description Rutas sin sesión: bienvenida, ingresar, registro y recuperar clave.
  */
 export default function PublicoLayout() {
   return <Stack screenOptions={{ headerShown: false }} />;

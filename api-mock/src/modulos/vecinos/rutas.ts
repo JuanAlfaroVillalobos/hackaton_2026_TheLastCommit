@@ -8,7 +8,7 @@ import { datosInvalidos, noEncontrado } from '../../nucleo/errores.js';
 import { leerBuzon, notificar } from '../../nucleo/notificar.js';
 import { numero, texto } from '../../nucleo/utilidades.js';
 import { aPublico } from '../auth/rutas.js';
-import { exigirTelefonoLibre, normalizarTelefono, validarOficios } from '../auth/validaciones.js';
+import { exigirTelefonoLibre, normalizarTelefono, validarNombre, validarOficios } from '../auth/validaciones.js';
 
 export const rutasVecinos = Router();
 rutasVecinos.use(requiereSesion);
@@ -25,9 +25,7 @@ rutasVecinos.patch('/yo', async (req, res) => {
   const cambios: Partial<Usuario> = {};
 
   if (req.body?.nombre !== undefined) {
-    const nombre = texto(req.body.nombre);
-    if (!nombre || nombre.length < 2 || nombre.length > 60) throw datosInvalidos('El nombre debe tener de 2 a 60 caracteres.');
-    cambios.nombre = nombre;
+    cambios.nombre = validarNombre(req.body.nombre);
   }
   if (req.body?.barrio !== undefined) {
     const barrio = texto(req.body.barrio);

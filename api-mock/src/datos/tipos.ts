@@ -28,6 +28,8 @@ export interface Usuario {
   ubicacionManual?: boolean;
   /** Tokens de FCM de los teléfonos con sesión abierta (README 5.4). No salen en /vecinos/yo. */
   dispositivos?: string[];
+  /** Momento en que aceptó la política de privacidad (Ley 29733). */
+  terminosAceptadosEn?: number;
 }
 
 // --- favores (P04, RF09) ---

@@ -2,6 +2,7 @@
 import cors from 'cors';
 import express from 'express';
 import { manejarErrores, rutaNoEncontrada } from './nucleo/errores.js';
+import { idempotencia } from './nucleo/idempotencia.js';
 import { rutasAuth } from './modulos/auth/rutas.js';
 import { rutasAyudaHumanitaria } from './modulos/ayuda-humanitaria/rutas.js';
 import { rutasDirectorio } from './modulos/directorio/rutas.js';
@@ -16,6 +17,8 @@ export function crearApp() {
   const app = express();
   app.use(cors());
   app.use(express.json());
+  // RN-20: no repetir acciones reenviadas por la bandeja de salida (cabecera X-Id-Accion).
+  app.use(idempotencia);
   if (RETRASO_MS > 0) app.use((_req, _res, next) => void setTimeout(next, RETRASO_MS));
 
   app.get('/salud', (_req, res) => {
