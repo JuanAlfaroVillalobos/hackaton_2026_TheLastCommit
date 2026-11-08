@@ -32,7 +32,11 @@ export async function mostrarNotificacion({
   id,
 }: OpcionesMostrar): Promise<string | null> {
   if (Platform.OS !== 'android') return null;
-  await crearCanales();
+  try {
+    await crearCanales();
+  } catch {
+    return null; // sin módulo nativo (Expo Go)
+  }
 
   const emergencia = canal === CANALES.emergencias;
   const botones: AndroidAction[] = acciones.map((a) => ({
@@ -40,24 +44,29 @@ export async function mostrarNotificacion({
     pressAction: a.abrirApp ? { id: a.id, launchActivity: 'default' } : { id: a.id },
   }));
 
-  return notifee.displayNotification({
-    id: id ?? carga?.idNotificacion,
-    title: titulo,
-    body: cuerpo,
-    data: carga ? (Object.fromEntries(Object.entries(carga).filter(([, v]) => v !== undefined)) as Record<string, string>) : undefined,
-    android: {
-      channelId: canal,
-      smallIcon: 'ic_launcher',
-      color: emergencia ? '#C62828' : '#C2410C',
-      importance: emergencia ? AndroidImportance.HIGH : AndroidImportance.DEFAULT,
-      visibility: emergencia ? AndroidVisibility.PUBLIC : AndroidVisibility.PRIVATE,
-      category: emergencia ? AndroidCategory.ALARM : undefined,
-      pressAction: { id: 'default', launchActivity: 'default' },
-      fullScreenAction: emergencia && pantallaCompleta ? { id: 'default', launchActivity: 'default' } : undefined,
-      lightUpScreen: emergencia,
-      actions: botones.length ? botones : undefined,
-    },
-  });
+  try {
+    return await notifee.displayNotification({
+      id: id ?? carga?.idNotificacion,
+      title: titulo,
+      body: cuerpo,
+      data: carga ? (Object.fromEntries(Object.entries(carga).filter(([, v]) => v !== undefined)) as Record<string, string>) : undefined,
+      android: {
+        channelId: canal,
+        smallIcon: 'ic_launcher',
+        color: emergencia ? '#C62828' : '#C2410C',
+        importance: emergencia ? AndroidImportance.HIGH : AndroidImportance.DEFAULT,
+        visibility: emergencia ? AndroidVisibility.PUBLIC : AndroidVisibility.PRIVATE,
+        category: emergencia ? AndroidCategory.ALARM : undefined,
+        pressAction: { id: 'default', launchActivity: 'default' },
+        fullScreenAction: emergencia && pantallaCompleta ? { id: 'default', launchActivity: 'default' } : undefined,
+        lightUpScreen: emergencia,
+        actions: botones.length ? botones : undefined,
+      },
+
+    });
+  } catch {
+    return null; // sin módulo nativo (Expo Go)
+  }
 }
 
 /**
@@ -65,5 +74,9 @@ export async function mostrarNotificacion({
  */
 export async function quitarNotificacion(id: string): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await notifee.cancelNotification(id).catch(() => undefined);
+  try {
+    await notifee.cancelNotification(id);
+  } catch {
+    // sin módulo nativo (Expo Go)
+  }
 }

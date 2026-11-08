@@ -17,11 +17,15 @@ if (Platform.OS === 'android') {
     // FCM no disponible (p. ej. sin google-services.json): las notificaciones locales siguen funcionando.
   }
 
-  notifee.onBackgroundEvent(async ({ type, detail }) => {
-    if (type !== EventType.PRESS && type !== EventType.ACTION_PRESS) return;
-    const carga = aCarga(detail.notification?.data);
-    if (!carga) return;
-    // Con la app cerrada no hay navegación montada: solo se avisa al módulo (p. ej. «Estoy bien» sin abrir la app).
-    await alPulsar(carga, type === EventType.ACTION_PRESS ? (detail.pressAction?.id ?? null) : null, false);
-  });
+  try {
+    notifee.onBackgroundEvent(async ({ type, detail }) => {
+      if (type !== EventType.PRESS && type !== EventType.ACTION_PRESS) return;
+      const carga = aCarga(detail.notification?.data);
+      if (!carga) return;
+      // Con la app cerrada no hay navegación montada: solo se avisa al módulo (p. ej. «Estoy bien» sin abrir la app).
+      await alPulsar(carga, type === EventType.ACTION_PRESS ? (detail.pressAction?.id ?? null) : null, false);
+    });
+  } catch {
+    // Sin módulo nativo (Expo Go): no hay eventos en segundo plano.
+  }
 }

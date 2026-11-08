@@ -63,7 +63,9 @@ export async function obtenerFoto({
     mediaTypes: ['images'],
     allowsEditing: cuadrada,
     aspect: cuadrada ? [1, 1] : undefined,
-    quality: 1,
+    // Calidad media desde el origen: una foto a máxima calidad ocupa muchos MB y en teléfonos con poca RAM
+    // puede cerrar la app mientras se procesa.
+    quality: 0.6,
     exif: false,
     cameraType: camaraFrontal ? ImagePicker.CameraType.front : ImagePicker.CameraType.back,
   };
