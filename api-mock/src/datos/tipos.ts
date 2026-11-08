@@ -134,13 +134,32 @@ export interface FichaEmergencia {
 }
 
 // --- emergencia (RF20, botón SOS) ---
+/** Firestore: `alertas/{id}`. */
 export interface AlertaEmergencia {
   id: string;
   autorId: string;
   autorNombre: string;
   lat: number;
   lng: number;
+  /** Celda H3 de resolución 8 (RN-11); la calcula la API, nunca la app. */
+  celdaH3: string;
   estado: 'ACTIVA' | 'ATENDIDA' | 'CANCELADA';
   canal: 'APP' | 'SMS';
   creadoEn: number;
+}
+
+/**
+ * Firestore: `celdas/{celdaH3}`. Conteo de la ventana móvil de 10 min (RN-11, RN-12). Se recalcula
+ * entero en cada alerta o cancelación, así que repetir el cálculo no lo descuadra.
+ */
+export interface ConteoCelda {
+  id: string;
+  celdaH3: string;
+  /** Vecinos distintos con una alerta no cancelada en la ventana (RN-12). */
+  alertantes: number;
+  /** Alertas no canceladas en la ventana, aunque sean del mismo vecino. */
+  alertas: number;
+  ventanaDesde: number;
+  ultimaAlertaEn: number | null;
+  actualizadoEn: number;
 }

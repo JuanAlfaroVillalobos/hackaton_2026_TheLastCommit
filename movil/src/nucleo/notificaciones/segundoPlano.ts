@@ -1,14 +1,15 @@
 // Ruta: src/nucleo/notificaciones/segundoPlano.ts
 // Manejadores con la app cerrada o en segundo plano (FCM de datos y toques en la notificación).
 // Deben registrarse antes de montar la app: los importa `src/nucleo/arranque.ts` desde `movil/index.ts`.
-import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import notifee, { EventType } from 'react-native-notify-kit';
+import { fcm } from './fcm';
 import { aCarga, alPulsar, despachar } from './manejadores';
 
 if (Platform.OS === 'android') {
+  const m = fcm();
   try {
-    setBackgroundMessageHandler(getMessaging(), async (mensaje) => {
+    m?.setBackgroundMessageHandler(m.getMessaging(), async (mensaje) => {
       const carga = aCarga(mensaje.data);
       if (carga) await despachar(carga, { enPrimerPlano: false, origen: 'fcm' });
     });

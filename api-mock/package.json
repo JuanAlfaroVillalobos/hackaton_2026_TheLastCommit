@@ -2,11 +2,11 @@
   "name": "vecinos-api-mock",
   "version": "0.1.0",
   "private": true,
-  "description": "API REST de datos simulados para la app Vecinos. Se reemplaza por MongoDB o Firestore módulo por módulo.",
+  "description": "API REST de Vecinos en Express. Las colecciones migradas viven en Firestore (ALMACEN=firestore); el resto sigue en memoria.",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/servidor.ts",
-    "start": "tsx src/servidor.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/servidor.ts",
+    "start": "tsx --env-file-if-exists=.env src/servidor.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
@@ -15,7 +15,9 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "geofire-common": "^6.0.0"
+    "firebase-admin": "^13.10.0",
+    "geofire-common": "^6.0.0",
+    "h3-js": "^4.5.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
