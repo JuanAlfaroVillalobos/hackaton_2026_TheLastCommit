@@ -4,6 +4,7 @@ import { geohashForLocation } from "geofire-common";
 import { TEXTOS_INICIO } from "../constantes";
 import {
   coincideConOficio,
+  calcularBloques,
   esActiva,
   etiquetaEstadoSolicitante,
   minutosParaLlegar,
@@ -20,6 +21,7 @@ const gh = (norteM: number) => geohashForLocation([CENTRO.lat + norteM / 111_320
 function pub(parcial: Partial<PublicacionConAutor> & { id: string }): PublicacionConAutor {
   return {
     solicitanteId: "otro",
+    autorId: "otro",
     prestadorId: null,
     tipo: "NECESITO",
     categoria: "FAVOR_OFICIO",
@@ -29,7 +31,13 @@ function pub(parcial: Partial<PublicacionConAutor> & { id: string }): Publicacio
     estado: "PUBLICADA",
     etaMinutos: null,
     llegadaEstimada: null,
+    inicioServicio: null,
+    finServicio: null,
+    finSolicitadoPor: null,
+    bloques: null,
     devolucionEn: null,
+    devolucionRegistradaEn: null,
+    retrasoAvisadoEn: null,
     expiraEn: AHORA + 60 * MIN,
     creadoEn: AHORA - 10 * MIN,
     autorNombre: "Vecino",
@@ -44,7 +52,7 @@ describe("prepararMuro (RF09)", () => {
   it("excluye las propias, las no PUBLICADA, las vencidas y las que están fuera de 3 km", () => {
     const lista = [
       pub({ id: "ok" }),
-      pub({ id: "mia", solicitanteId: "yo" }),
+      pub({ id: "mia", autorId: "yo", solicitanteId: "yo" }),
       pub({ id: "aceptada", estado: "ACEPTADA" }),
       pub({ id: "vencida", expiraEn: AHORA - 1 }),
       pub({ id: "lejos", geohash: gh(5000) }),
@@ -87,6 +95,16 @@ describe("puedeCrearPublicacion (RN-04)", () => {
     expect(puedeCrearPublicacion("nc00")).toEqual({ permitido: false, motivo: TEXTOS_INICIO.necesidadActiva });
     expect(TEXTOS_INICIO.necesidadActiva).toBe("Ya tienes una necesidad activa. Termínala o cancélala para publicar otra.");
     expect(puedeCrearPublicacion(null)).toEqual({ permitido: true, motivo: null });
+  });
+
+  describe("calcularBloques (RN-09)", () => {
+    it("redondea hacia arriba en bloques de 30 minutos, con mínimo 1 y tope 16", () => {
+      const inicio = AHORA;
+      expect(calcularBloques(inicio, inicio)).toBe(1);
+      expect(calcularBloques(inicio, inicio + 30 * MIN)).toBe(1);
+      expect(calcularBloques(inicio, inicio + 31 * MIN)).toBe(2);
+      expect(calcularBloques(inicio, inicio + 9 * 60 * MIN)).toBe(16);
+    });
   });
 });
 

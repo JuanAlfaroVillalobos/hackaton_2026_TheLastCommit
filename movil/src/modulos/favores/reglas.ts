@@ -33,7 +33,7 @@ type ContextoMuro = {
 export function prepararMuro(publicaciones: PublicacionConAutor[], ctx: ContextoMuro): ElementoMuro[] {
   const radio = ctx.radioM ?? RADIO_MURO_M;
   return publicaciones
-    .filter((p) => p.estado === "PUBLICADA" && p.expiraEn > ctx.ahora && p.solicitanteId !== ctx.uid)
+    .filter((p) => p.estado === "PUBLICADA" && p.expiraEn > ctx.ahora && p.autorId !== ctx.uid)
     .filter((p) => ctx.filtro === "TODO" || p.categoria === ctx.filtro)
     .map((p) => ({
       ...p,
@@ -47,6 +47,12 @@ export function prepararMuro(publicaciones: PublicacionConAutor[], ctx: Contexto
         a.distanciaM - b.distanciaM ||
         b.creadoEn - a.creadoEn,
     );
+}
+
+/** RN-09: bloques de 30 minutos, con mínimo 1 y máximo de 8 horas por servicio. */
+export function calcularBloques(inicio: number, fin: number): number {
+  const minutos = Math.max(0, (fin - inicio) / 60_000);
+  return Math.min(16, Math.max(1, Math.ceil(minutos / 30)));
 }
 
 /** RN-04: con una necesidad activa no se puede crear otra publicación. */

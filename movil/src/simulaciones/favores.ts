@@ -22,6 +22,7 @@ export const vecinoActualMock: VecinoActual = {
   barrio: "Barrio Los Olivos",
   oficios: ["tecnologia", "clases-tutorias"],
   necesidadActivaId: ESCENARIO_DEMO === "activa" ? ID_MI_PUBLICACION : null,
+  servicioActivoId: null,
   ubicacion: ZONA_DEMO,
 };
 
@@ -29,12 +30,25 @@ export const pendientesBandejaMock = ESCENARIO_DEMO === "sin-conexion" ? 1 : 0;
 
 export const permisoNotificacionesMock: EstadoPermiso = ESCENARIO_DEMO === "sin-conexion" ? "denegado" : "concedido";
 
-const base = { prestadorId: null, etaMinutos: null, llegadaEstimada: null, devolucionEn: null, prestadorNombre: null };
+const base = {
+  prestadorId: null,
+  etaMinutos: null,
+  llegadaEstimada: null,
+  inicioServicio: null,
+  finServicio: null,
+  finSolicitadoPor: null,
+  bloques: null,
+  devolucionEn: null,
+  devolucionRegistradaEn: null,
+  retrasoAvisadoEn: null,
+  prestadorNombre: null,
+};
 
 const muro: PublicacionConAutor[] = [
   {
     ...base,
     id: "nc01",
+    autorId: "u11",
     solicitanteId: "u11",
     autorNombre: "Rosa Vega",
     tipo: "NECESITO",
@@ -49,6 +63,7 @@ const muro: PublicacionConAutor[] = [
   {
     ...base,
     id: "nc02",
+    autorId: "u12",
     solicitanteId: "u12",
     autorNombre: "Jorge Quispe",
     tipo: "NECESITO",
@@ -63,7 +78,10 @@ const muro: PublicacionConAutor[] = [
   {
     ...base,
     id: "nc03",
-    solicitanteId: "u13",
+    autorId: "u13",
+    solicitanteId: null,
+    prestadorId: "u13",
+    prestadorNombre: "Carmen Huamán",
     autorNombre: "Carmen Huamán",
     tipo: "OFREZCO",
     categoria: "PRESTAMO",
@@ -79,6 +97,7 @@ const muro: PublicacionConAutor[] = [
   {
     ...base,
     id: "nc04",
+    autorId: "u14",
     solicitanteId: "u14",
     autorNombre: "Pedro Salas",
     tipo: "NECESITO",
@@ -93,6 +112,7 @@ const muro: PublicacionConAutor[] = [
   {
     ...base,
     id: "nc05",
+    autorId: "u15",
     solicitanteId: "u15",
     autorNombre: "Lucía Torres",
     tipo: "NECESITO",
@@ -109,6 +129,7 @@ const muro: PublicacionConAutor[] = [
 const miPublicacion: PublicacionConAutor = {
   ...base,
   id: ID_MI_PUBLICACION,
+  autorId: UID_YO,
   solicitanteId: UID_YO,
   autorNombre: vecinoActualMock.nombre,
   prestadorId: "u16",

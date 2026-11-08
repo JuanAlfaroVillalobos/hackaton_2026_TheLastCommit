@@ -16,6 +16,11 @@ export interface Usuario {
   barrio: string;
   oficios: string[];
   necesidadActivaId: string | null;
+  servicioActivoId?: string | null;
+  horasAyudadas?: number;
+  horasSolicitadas?: number;
+  promedio?: number | null;
+  numCalificaciones?: number;
   ubicacion: Coordenada;
   creadoEn: number;
   // --- cuentas (Persona A): opcionales para no tocar las semillas ---
@@ -43,24 +48,62 @@ export interface Usuario {
   };
 }
 
-// --- favores (P04, RF09) ---
+export type TipoPublicacion = 'NECESITO' | 'OFREZCO';
+export type CategoriaPublicacion = 'FAVOR_OFICIO' | 'PRESTAMO' | 'DONACION' | 'INTERCAMBIO' | 'MOVILIDAD';
+export type EstadoNecesidad =
+  | 'PUBLICADA'
+  | 'ACEPTADA'
+  | 'EN_SITIO'
+  | 'EN_CURSO'
+  | 'FIN_SOLICITADO'
+  | 'FINALIZADO'
+  | 'CANCELADA'
+  | 'EXPIRADA';
+
+// --- favores (RF09-RF19, RF35) ---
 export interface Publicacion {
   id: string;
-  solicitanteId: string;
+  autorId: string;
   autorNombre: string;
+  solicitanteId: string | null;
   prestadorId: string | null;
   prestadorNombre: string | null;
-  tipo: 'NECESITO' | 'OFREZCO';
-  categoria: 'FAVOR_OFICIO' | 'PRESTAMO';
+  tipo: TipoPublicacion;
+  categoria: CategoriaPublicacion;
   oficioId: string | null;
   descripcion: string;
   geohash: string;
-  estado: 'PUBLICADA' | 'ACEPTADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA';
+  estado: EstadoNecesidad;
   etaMinutos: number | null;
   llegadaEstimada: number | null;
+  inicioServicio: number | null;
+  finServicio: number | null;
+  finSolicitadoPor: string | null;
+  bloques: number | null;
   devolucionEn: number | null;
+  devolucionRegistradaEn: number | null;
+  retrasoAvisadoEn: number | null;
   expiraEn: number;
   creadoEn: number;
+}
+
+export interface Calificacion {
+  id: string;
+  publicacionId: string;
+  autorUid: string;
+  calificadoId: string;
+  estrellas: number;
+  creadoEn: number;
+}
+
+export interface NotificacionFavor {
+  id: string;
+  uid: string;
+  publicacionId: string;
+  tipo: 'ACEPTADA' | 'LLEGADA' | 'FIN_SOLICITADO' | 'CANCELADA' | 'EXPIRADA' | 'RETRASO' | 'FINALIZADA';
+  mensaje: string;
+  leida: boolean;
+  creadaEn: number;
 }
 
 // --- directorio (economía local) ---

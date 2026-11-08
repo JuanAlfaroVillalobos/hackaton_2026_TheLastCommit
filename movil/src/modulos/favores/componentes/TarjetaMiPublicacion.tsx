@@ -13,8 +13,15 @@ type Props = { publicacion: PublicacionConAutor; ahora: number; onVer: () => voi
 
 export function TarjetaMiPublicacion({ publicacion: p, ahora, onVer }: Props) {
   const { colores } = useTema();
-  const estado = etiquetaEstadoSolicitante(p.estado, p.prestadorNombre);
-  const minutos = minutosParaLlegar(p, ahora);
+  const estado =
+    p.tipo === "OFREZCO"
+      ? p.estado === "ACEPTADA"
+        ? "Un vecino aceptó tu oferta"
+        : p.estado === "EN_SITIO"
+          ? "El solicitante indica que llegó"
+          : etiquetaEstadoSolicitante(p.estado, p.prestadorNombre)
+      : etiquetaEstadoSolicitante(p.estado, p.prestadorNombre);
+  const minutos = p.tipo === "NECESITO" ? minutosParaLlegar(p, ahora) : null;
   const detalle = p.oficioId ? OFICIOS[p.oficioId] : ETIQUETA_CATEGORIA[p.categoria];
 
   return (

@@ -33,7 +33,21 @@ const usuario = (id: string, nombre: string, correo: string, extra: Partial<Usua
   barrio: 'Barrio Los Olivos',
   oficios: [],
   necesidadActivaId: null,
+  servicioActivoId: null,
+  horasAyudadas: 0,
+  horasSolicitadas: 0,
+  promedio: null,
+  numCalificaciones: 0,
   ubicacion: ZONA_DEMO,
+  identidad: {
+    estado: 'PENDIENTE',
+    dni: '',
+    nombres: nombre,
+    apellidos: '',
+    enviadaEn: hace(30 * 24 * 60),
+    revisadaEn: null,
+    motivo: null,
+  },
   creadoEn: hace(30 * 24 * 60),
   ...extra,
 });
@@ -46,32 +60,45 @@ export const usuarios: Usuario[] = [
   usuario('u16', 'Luis Paredes', 'luis@vecinos.pe', { oficios: ['mascotas'] }),
 ];
 
-const base = { prestadorId: null, etaMinutos: null, llegadaEstimada: null, devolucionEn: null, prestadorNombre: null };
+const base = {
+  prestadorId: null,
+  prestadorNombre: null,
+  etaMinutos: null,
+  llegadaEstimada: null,
+  inicioServicio: null,
+  finServicio: null,
+  finSolicitadoPor: null,
+  bloques: null,
+  devolucionEn: null,
+  devolucionRegistradaEn: null,
+  retrasoAvisadoEn: null,
+};
 
 export const publicaciones: Publicacion[] = [
   {
-    ...base, id: 'nc01', solicitanteId: 'u11', autorNombre: 'Rosa Vega', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
+    ...base, id: 'nc01', autorId: 'u11', solicitanteId: 'u11', autorNombre: 'Rosa Vega', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
     oficioId: 'tecnologia', descripcion: 'Necesito ayuda para configurar el WhatsApp del celular de mi mamá.',
     geohash: gh(300, 0), estado: 'PUBLICADA', expiraEn: en(24 * 60 - 10), creadoEn: hace(10),
   },
   {
-    ...base, id: 'nc02', solicitanteId: 'u12', autorNombre: 'Jorge Quispe', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
+    ...base, id: 'nc02', autorId: 'u12', solicitanteId: 'u12', autorNombre: 'Jorge Quispe', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
     oficioId: 'gasfiteria', descripcion: 'Se rompió la llave del lavadero y gotea toda la noche. ¿Alguien me ayuda?',
     geohash: gh(-600, 0), estado: 'PUBLICADA', expiraEn: en(24 * 60 - 25), creadoEn: hace(25),
   },
   {
-    ...base, id: 'nc03', solicitanteId: 'u13', autorNombre: 'Carmen Huamán', tipo: 'OFREZCO', categoria: 'PRESTAMO',
+    ...base, id: 'nc03', autorId: 'u13', solicitanteId: null, prestadorId: 'u13', prestadorNombre: 'Carmen Huamán',
+    autorNombre: 'Carmen Huamán', tipo: 'OFREZCO', categoria: 'PRESTAMO',
     oficioId: null, descripcion: 'Presto una escalera de 6 peldaños para trabajos en casa.',
     geohash: gh(0, 1200), estado: 'PUBLICADA', devolucionEn: en(36 * 60), expiraEn: en(23 * 60), creadoEn: hace(60),
   },
   // No deben verse en el muro: fuera del radio y vencida (RF09). Sirven para probar el filtro de la app.
   {
-    ...base, id: 'nc04', solicitanteId: 'u14', autorNombre: 'Pedro Salas', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
+    ...base, id: 'nc04', autorId: 'u14', solicitanteId: 'u14', autorNombre: 'Pedro Salas', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
     oficioId: 'carpinteria', descripcion: 'Necesito arreglar una puerta.',
     geohash: gh(5000, 0), estado: 'PUBLICADA', expiraEn: en(600), creadoEn: hace(5),
   },
   {
-    ...base, id: 'nc05', solicitanteId: 'u15', autorNombre: 'Lucía Torres', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
+    ...base, id: 'nc05', autorId: 'u15', solicitanteId: 'u15', autorNombre: 'Lucía Torres', tipo: 'NECESITO', categoria: 'FAVOR_OFICIO',
     oficioId: 'mandados-compras', descripcion: '¿Alguien me trae pan?',
     geohash: gh(200, 200), estado: 'PUBLICADA', expiraEn: hace(1), creadoEn: hace(24 * 60 + 1),
   },

@@ -16,6 +16,7 @@ export type VecinoActual = {
   oficios: OficioId[];
   /** Puntero de RN-04: lo escriben solo las funciones. */
   necesidadActivaId: string | null;
+  servicioActivoId: string | null;
   /** Última ubicación conocida (centro del muro, RF09). */
   ubicacion: Coordenada | null;
 };
@@ -46,7 +47,8 @@ export type FiltroMuro = "TODO" | CategoriaPublicacion;
  */
 export type Publicacion = {
   id: string;
-  solicitanteId: string;
+  autorId: string;
+  solicitanteId: string | null;
   prestadorId: string | null;
   tipo: TipoPublicacion;
   categoria: CategoriaPublicacion;
@@ -57,15 +59,57 @@ export type Publicacion = {
   estado: EstadoNecesidad;
   etaMinutos: number | null;
   llegadaEstimada: number | null;
+  inicioServicio: number | null;
+  finServicio: number | null;
+  finSolicitadoPor: string | null;
+  bloques: number | null;
   devolucionEn: number | null;
+  devolucionRegistradaEn: number | null;
+  retrasoAvisadoEn: number | null;
   expiraEn: number;
   creadoEn: number;
 };
 
-/** Publicación con los nombres leídos de `perfiles/{uid}`. */
+export type PerfilPublicoFavor = {
+  uid: string | null;
+  nombre: string;
+  fotoUrl: string | null;
+  horasAyudadas: number;
+  horasSolicitadas: number;
+  promedio: number | null;
+  numCalificaciones: number;
+  estadoIdentidad: "NO_ENVIADA" | "PENDIENTE" | "VERIFICADA" | "RECHAZADA";
+};
+
+/** Publicación con los perfiles públicos necesarios para el detalle (RF11). */
 export type PublicacionConAutor = Publicacion & {
   autorNombre: string;
   prestadorNombre: string | null;
+  perfilAutor?: PerfilPublicoFavor;
+  perfilSolicitante?: PerfilPublicoFavor;
+  perfilPrestador?: PerfilPublicoFavor;
+  ubicacionSolicitanteExacta?: Coordenada;
+  ubicacionPrestadorEnVivo?: Coordenada & { actualizadoEn: number };
+  misCalificaciones?: Calificacion[];
+};
+
+export type Calificacion = {
+  id: string;
+  publicacionId: string;
+  autorUid: string;
+  calificadoId: string;
+  estrellas: number;
+  creadoEn: number;
+};
+
+export type NotificacionFavor = {
+  id: string;
+  uid: string;
+  publicacionId: string;
+  tipo: "ACEPTADA" | "LLEGADA" | "FIN_SOLICITADO" | "CANCELADA" | "EXPIRADA" | "RETRASO" | "FINALIZADA";
+  mensaje: string;
+  leida: boolean;
+  creadaEn: number;
 };
 
 /** Elemento ya calculado para pintar una tarjeta del muro. */

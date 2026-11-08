@@ -4,9 +4,11 @@ import { networkInterfaces } from 'node:os';
 import { crearApp } from './app.js';
 import { COLECCIONES_FIRESTORE } from './datos/almacen.js';
 import { CLAVE_DEMO } from './datos/semillas.js';
+import { ejecutarTareasFavoresMock } from './modulos/favores/rutas.js';
 import { PROYECTO_FIREBASE } from './nucleo/firebase.js';
 
 const PUERTO = Number(process.env.PORT ?? 3000);
+const INTERVALO_TAREAS_MS = 60_000;
 
 /** IPs de la red local, para escribirlas en EXPO_PUBLIC_API_URL si el celular no la detecta solo. */
 const ipsLocales = Object.values(networkInterfaces())
@@ -26,4 +28,14 @@ crearApp().listen(PUERTO, '0.0.0.0', () => {
   } else {
     console.log('  todo en memoria (ALMACEN=firestore en .env para guardar alertas en Firestore)');
   }
+});
+
+const tareas = setInterval(() => {
+  ejecutarTareasFavoresMock().catch((error: unknown) => {
+    console.error('Falló la tarea programada del módulo favores.', error);
+  });
+}, INTERVALO_TAREAS_MS);
+tareas.unref();
+ejecutarTareasFavoresMock().catch((error: unknown) => {
+  console.error('Falló la ejecución inicial de tareas del módulo favores.', error);
 });
