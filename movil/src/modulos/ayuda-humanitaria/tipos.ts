@@ -2,7 +2,8 @@
 // Tipos del módulo. Cuando Malek publique `compartido/src/modelos`, este archivo los re-exporta.
 // Fechas en milisegundos (Date.now()) para no depender de Firebase en los mocks.
 
-export type EstadoVecino = "NECESITA_AYUDA" | "SIN_RESPONDER" | "ESTOY_BIEN";
+/** Estados del README 5.2 (los fija el módulo emergencia, RF21–RF24). */
+export type EstadoVecino = "NECESITA_AYUDA" | "SIN_RESPONDER" | "A_SALVO";
 
 export type VecinoEmergencia = {
   uid: string;

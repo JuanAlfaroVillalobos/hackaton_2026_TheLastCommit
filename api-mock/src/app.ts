@@ -7,6 +7,7 @@ import { panelDev } from './nucleo/panelDev.js';
 import { rutasAuth } from './modulos/auth/rutas.js';
 import { rutasAyudaHumanitaria } from './modulos/ayuda-humanitaria/rutas.js';
 import { rutasDirectorio } from './modulos/directorio/rutas.js';
+import { rutasDevEmergencia } from './modulos/emergencia/dev.js';
 import { rutasEmergencia } from './modulos/emergencia/rutas.js';
 import { rutasFavores } from './modulos/favores/rutas.js';
 import { rutasIdentidad } from './modulos/identidad/rutas.js';
@@ -29,7 +30,10 @@ export function crearApp() {
   });
 
   // Panel para ver los datos en memoria desde el navegador (solo en desarrollo).
-  if (process.env.NODE_ENV !== 'production') app.use('/dev', panelDev);
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/dev/emergencia', rutasDevEmergencia);
+    app.use('/dev', panelDev);
+  }
 
   const v1 = express.Router();
   v1.use('/auth', rutasAuth);

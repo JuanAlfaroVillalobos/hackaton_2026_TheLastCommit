@@ -7,6 +7,13 @@ export interface Coordenada {
   lng: number;
 }
 
+/** `sesiones/{token}`: sesión simulada (hasta pasar a Firebase Auth). */
+export interface Sesion {
+  id: string;
+  uid: string;
+  creadoEn: number;
+}
+
 /** Cuenta + perfil. `clave` nunca sale de la API (ver aPublico en modulos/auth). */
 export interface Usuario {
   id: string;
@@ -29,6 +36,8 @@ export interface Usuario {
   fotoUrl?: string | null;
   /** Momento de la última ubicación validada (RF42). */
   ubicacionEn?: number | null;
+  /** Celda H3 (res. 8) de `ubicacion`; la calcula la API. Con `ubicacionEn` define al «vecino activo» (RN-11). */
+  celdaH3?: string | null;
   /** RF42: true si la ubicación se marcó moviendo el pin. */
   ubicacionManual?: boolean;
   /** Tokens de FCM de los teléfonos con sesión abierta (README 5.4). No salen en /vecinos/yo. */
@@ -189,6 +198,8 @@ export interface AlertaEmergencia {
   estado: 'ACTIVA' | 'ATENDIDA' | 'CANCELADA';
   canal: 'APP' | 'SMS';
   creadoEn: number;
+  /** Emergencia a la que se sumó la alerta (RF21), si la hubo. */
+  emergenciaId?: string | null;
 }
 
 /**
@@ -205,4 +216,40 @@ export interface ConteoCelda {
   ventanaDesde: number;
   ultimaAlertaEn: number | null;
   actualizadoEn: number;
+}
+
+// --- modo emergencia (RF21–RF25, README 5.2) ---
+/** Firestore: `emergencias/{id}`. Cubre la celda que cruzó el umbral y sus 6 vecinas (RN-11). */
+export interface Emergencia {
+  id: string;
+  celdaCentro: string;
+  /** Centro de celdaCentro, para centrar el mapa de P11. */
+  centro: Coordenada;
+  /** celdaCentro + sus 6 vecinas (k = 1). */
+  celdas: string[];
+  estado: 'ACTIVA' | 'FINALIZADA';
+  activadaEn: number;
+  ultimaAlertaEn: number;
+  finalizadaEn: number | null;
+  /** RF25: por qué terminó. */
+  /** MANUAL: cerrada desde /dev (solo desarrollo). */
+  motivoFin: 'TODOS_A_SALVO' | 'SIN_ALERTAS' | 'MANUAL' | null;
+}
+
+export type EstadoVecinoEmergencia = 'SIN_RESPONDER' | 'NECESITA_AYUDA' | 'A_SALVO';
+
+/** Firestore: `emergencias/{id}/vecinos/{uid}`. El id es el uid del vecino. */
+export interface VecinoEnEmergencia {
+  id: string;
+  uid: string;
+  nombre: string;
+  estado: EstadoVecinoEmergencia;
+  lat: number;
+  lng: number;
+  /** Última alerta o «Necesito ayuda»; null si nunca pidió ayuda (entró como SIN_RESPONDER). */
+  ultimaAlertaEn: number | null;
+  /** Última vez que respondió en P12 (RF24). */
+  respondidoEn: number | null;
+  /** Momento en que entró a la emergencia. */
+  creadoEn: number;
 }

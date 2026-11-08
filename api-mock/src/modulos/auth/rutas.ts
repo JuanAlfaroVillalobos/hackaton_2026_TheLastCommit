@@ -4,6 +4,7 @@
 import { Router } from 'express';
 import { almacen } from '../../datos/almacen.js';
 import { ZONA_DEMO } from '../../datos/semillas.js';
+import { celdaDe } from '../emergencia/conteo.js';
 import type { Usuario } from '../../datos/tipos.js';
 import { abrirSesion, cerrarSesion, cerrarSesionesDe, leerToken, requiereSesion } from '../../nucleo/autenticacion.js';
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
@@ -49,13 +50,14 @@ rutasAuth.post('/registro', async (req, res) => {
     oficios: [],
     necesidadActivaId: null,
     ubicacion: ZONA_DEMO,
+    celdaH3: celdaDe(ZONA_DEMO.lat, ZONA_DEMO.lng),
     creadoEn: Date.now(),
     telefono,
     fotoUrl: null,
     ubicacionEn: null,
     terminosAceptadosEn: Date.now(),
   });
-  res.status(201).json({ token: abrirSesion(usuario.id), usuario: aPublico(usuario) });
+  res.status(201).json({ token: await abrirSesion(usuario.id), usuario: aPublico(usuario) });
 });
 
 /** Avisa en el formulario si el correo o el teléfono ya tienen cuenta (RN-01). */
@@ -116,7 +118,7 @@ rutasAuth.post('/ingresar', async (req, res) => {
     );
   }
   intentos.delete(correo);
-  res.json({ token: abrirSesion(usuario.id), usuario: aPublico(usuario) });
+  res.json({ token: await abrirSesion(usuario.id), usuario: aPublico(usuario) });
 });
 
 rutasAuth.get('/yo', requiereSesion, async (_req, res) => {
@@ -125,9 +127,9 @@ rutasAuth.get('/yo', requiereSesion, async (_req, res) => {
   res.json(aPublico(usuario));
 });
 
-rutasAuth.post('/salir', (req, res) => {
+rutasAuth.post('/salir', async (req, res) => {
   const token = leerToken(req.headers.authorization);
-  if (token) cerrarSesion(token);
+  if (token) await cerrarSesion(token);
   res.status(204).end();
 });
 
@@ -178,8 +180,8 @@ rutasAuth.post('/restablecer', async (req, res) => {
   codigos.delete(correo);
   intentos.delete(correo);
   // La clave cambió: se cierran las sesiones abiertas en otros teléfonos.
-  cerrarSesionesDe(usuario.id);
-  res.json({ token: abrirSesion(usuario.id), usuario: aPublico({ ...usuario, clave }) });
+  await cerrarSesionesDe(usuario.id);
+  res.json({ token: await abrirSesion(usuario.id), usuario: aPublico({ ...usuario, clave }) });
 });
 
 // ---------- Cambiar clave con sesión iniciada ----------
@@ -196,6 +198,6 @@ rutasAuth.post('/cambiar-clave', requiereSesion, async (req, res) => {
 
   await almacen.usuarios.actualizar(uid, { clave: nueva });
   // Sigue abierta la sesión de este teléfono; las demás se cierran.
-  cerrarSesionesDe(uid, leerToken(req.headers.authorization));
+  await cerrarSesionesDe(uid, leerToken(req.headers.authorization));
   res.status(204).end();
 });

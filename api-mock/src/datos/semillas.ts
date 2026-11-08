@@ -2,6 +2,7 @@
 // Datos de arranque. Copian movil/src/simulaciones/ (escenario «muro»). Zona: Plaza de Armas de Trujillo.
 // Las fechas se calculan al levantar el servidor, así que las publicaciones nunca aparecen vencidas.
 import { geohashForLocation } from 'geofire-common';
+import { latLngToCell } from 'h3-js';
 import type {
   AlertaEmergencia,
   FichaEmergencia,
@@ -39,6 +40,7 @@ const usuario = (id: string, nombre: string, correo: string, extra: Partial<Usua
   promedio: null,
   numCalificaciones: 0,
   ubicacion: ZONA_DEMO,
+  celdaH3: latLngToCell(ZONA_DEMO.lat, ZONA_DEMO.lng, 8),
   identidad: {
     estado: 'PENDIENTE',
     dni: '',

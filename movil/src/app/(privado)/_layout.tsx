@@ -1,7 +1,7 @@
 import { useCalleActual } from '@/compartido/hooks/useCalle';
 import { useTema } from '@/compartido/tema';
 import { Encabezado } from '@/compartido/ui';
-import { BotonSos } from '@/modulos/emergencia';
+import { BotonSos, ProveedorEmergencia } from '@/modulos/emergencia';
 import { useVecinoActual } from '@/modulos/favores';
 import { Stack } from 'expo-router';
 
@@ -18,12 +18,15 @@ function EncabezadoPrivado() {
 /**
  * @description Rutas con sesión. Las pestañas llevan el encabezado con «SOS»; P11 (emergencia) tiene su
  * propia barra, y los flujos de cuentas e identidad usan su propio diseño de pantalla.
+ * ProveedorEmergencia pasa toda la app a modo emergencia cuando la zona lo está (RF21, RF22).
  */
 export default function PrivadoLayout() {
   const { colores } = useTema();
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo } }}>
-      <Stack.Screen name="(pestanas)" options={{ headerShown: true, header: () => <EncabezadoPrivado /> }} />
-    </Stack>
+    <ProveedorEmergencia>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo } }}>
+        <Stack.Screen name="(pestanas)" options={{ headerShown: true, header: () => <EncabezadoPrivado /> }} />
+      </Stack>
+    </ProveedorEmergencia>
   );
 }
