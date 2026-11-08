@@ -1,12 +1,15 @@
 // Ruta: src/modulos/ayuda-humanitaria/componentes/TarjetaReporte.tsx
+import { useTema } from "@/compartido/tema";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
-    COLOR_ESTADO_REPORTE,
-    ETIQUETA_ESTADO_REPORTE,
-    ETIQUETA_TIPO_VULNERABILIDAD,
-    ICONO_TIPO_VULNERABILIDAD,
-    TEMA_EMERGENCIA as T,
+  COLOR_ESTADO_REPORTE,
+  ETIQUETA_ESTADO_REPORTE,
+  ETIQUETA_TIPO_VULNERABILIDAD,
+  ICONO_TIPO_VULNERABILIDAD,
 } from "../constantes";
+import type { Colores } from "../estilos";
+import { FotoReporte } from "./FotoReporte";
 import { puedeAyudar, puedeResolver, tiempoDesde } from "../reglas";
 import type { ReporteVulnerabilidad } from "../tipos";
 
@@ -19,6 +22,8 @@ type Props = {
 };
 
 export function TarjetaReporte({ reporte: r, ahora, miUid, onAyudar, onResolver }: Props) {
+  const { colores: T } = useTema();
+  const styles = useMemo(() => crearEstilos(T), [T]);
   const color = COLOR_ESTADO_REPORTE[r.estado];
   return (
     <View style={styles.tarjeta}>
@@ -36,8 +41,9 @@ export function TarjetaReporte({ reporte: r, ahora, miUid, onAyudar, onResolver 
       </View>
 
       {r.nota ? <Text style={styles.nota}>{r.nota}</Text> : null}
+      {r.tieneFoto ? <FotoReporte reporteId={r.id} /> : null}
 
-      {puedeAyudar(r) ? (
+      {puedeAyudar(r, miUid) ? (
         <Pressable accessibilityRole="button" style={styles.boton} onPress={() => onAyudar(r.id)}>
           <Text style={styles.botonTexto}>Voy a ayudar</Text>
         </Pressable>
@@ -51,7 +57,8 @@ export function TarjetaReporte({ reporte: r, ahora, miUid, onAyudar, onResolver 
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (T: Colores) =>
+  StyleSheet.create({
   tarjeta: {
     backgroundColor: T.superficie,
     borderColor: T.borde,
@@ -77,12 +84,12 @@ const styles = StyleSheet.create({
   },
   botonTexto: { color: T.sobrePrimario, fontSize: 15, fontWeight: "800" },
   botonSecundario: {
-    borderColor: T.acento,
+    borderColor: T.primario,
     borderWidth: 1.5,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center",
     marginTop: 12,
   },
-  botonSecundarioTexto: { color: T.acento, fontSize: 14, fontWeight: "700" },
+  botonSecundarioTexto: { color: T.primario, fontSize: 14, fontWeight: "700" },
 });
