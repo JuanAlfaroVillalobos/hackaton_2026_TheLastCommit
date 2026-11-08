@@ -113,7 +113,7 @@ export interface RecursoCritico {
   geohash: string;
   lat: number;
   lng: number;
-  estado: 'ABIERTO' | 'ASIGNADO' | 'ENTREGADO';
+  estado: 'ABIERTO' | 'ASIGNADO' | 'CERRADO';
   asignadoId: string | null;
   canal: 'APP' | 'SMS';
   creadoEn: number;
@@ -129,6 +129,8 @@ export interface FichaEmergencia {
   horario: string;
   geohash: string;
   aprobado: boolean;
+  /** uid del vecino que la propuso; null en las fichas oficiales. */
+  propuestaPorId?: string | null;
 }
 
 // --- emergencia (RF20, botón SOS) ---

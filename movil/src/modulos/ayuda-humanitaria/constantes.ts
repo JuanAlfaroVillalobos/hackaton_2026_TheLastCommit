@@ -1,20 +1,7 @@
 // Ruta: src/modulos/ayuda-humanitaria/constantes.ts
-// Paleta del modo emergencia propuesta por el equipo (oscura). Cuando Jamila publique
-// `compartido/tema`, estos valores se reemplazan por useTema() sin tocar las pantallas.
+// Los colores de la interfaz vienen del tema compartido (`useTema()`); aquí solo van los de estado,
+// que significan lo mismo en cualquier tema.
 import type { EstadoReporte, EstadoVecino, TipoVulnerabilidad } from "./tipos";
-
-export const TEMA_EMERGENCIA = {
-  fondo: "#140B0B",
-  superficie: "#231212",
-  primario: "#FF5252",
-  primarioOscuro: "#B71C1C",
-  sobrePrimario: "#1A0000",
-  acento: "#FFC400",
-  texto: "#FFF1F1",
-  textoSecundario: "#E0B4B4",
-  borde: "#4A2323",
-  alertaFondo: "#B71C1C",
-} as const;
 
 export const COLOR_ESTADO: Record<EstadoVecino, string> = {
   NECESITA_AYUDA: "#FF5252",
@@ -70,8 +57,23 @@ export const ETIQUETA_ESTADO_REPORTE: Record<EstadoReporte, string> = {
   RESUELTO: "Resuelto",
 };
 
+/** Tipos de reporte que van primero en la lista de emergencia: lo más urgente. */
+export const TIPOS_CRITICOS: TipoVulnerabilidad[] = ["HERIDO", "NINOS_SOLOS"];
+
+/** Nombre corto para la etiqueta bajo el pin del mapa. */
+export const ETIQUETA_CORTA_TIPO_VULNERABILIDAD: Record<TipoVulnerabilidad, string> = {
+  HERIDO: "Herido",
+  ADULTO_MAYOR_O_DISCAPACIDAD: "Adulto mayor",
+  NINOS_SOLOS: "Niños solos",
+  SIN_AGUA_ALIMENTOS: "Sin agua",
+  VIVIENDA_DANADA: "Vivienda",
+  OTRO: "Otro",
+};
+
 export const COLOR_ESTADO_REPORTE: Record<EstadoReporte, string> = {
   ABIERTO: "#FF5252",
   EN_ATENCION: "#FFC400",
   RESUELTO: "#4ADE80",
 };
+/** Color del marcador de un reporte de vulnerabilidad en el mapa del tablero. */
+export const COLOR_MARCADOR_REPORTE = "#E53935";

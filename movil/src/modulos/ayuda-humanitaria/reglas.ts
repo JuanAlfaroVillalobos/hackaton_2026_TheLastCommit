@@ -1,9 +1,13 @@
 // Ruta: src/modulos/ayuda-humanitaria/reglas.ts
 // Reglas puras y testeables (sin React ni Firebase).
+import { TIPOS_CRITICOS } from "./constantes";
 import type {
   Coordenada,
   EstadoVecino,
+  ModoRecurso,
+  RecursoCritico,
   ReporteVulnerabilidad,
+  TipoRecurso,
   TipoVulnerabilidad,
   VecinoEmergencia,
 } from "./tipos";
@@ -67,8 +71,8 @@ export function generarCodigo(): string {
 }
 
 /** ABIERTO → EN_ATENCION: cualquiera puede pulsar «Voy a ayudar». */
-export function puedeAyudar(r: ReporteVulnerabilidad): boolean {
-  return r.estado === "ABIERTO";
+export function puedeAyudar(r: ReporteVulnerabilidad, uid: string): boolean {
+  return r.estado === "ABIERTO" && r.autorId !== uid;
 }
 
 /** EN_ATENCION → RESUELTO: solo quien está atendiendo. */
@@ -76,8 +80,64 @@ export function puedeResolver(r: ReporteVulnerabilidad, uid: string): boolean {
   return r.estado === "EN_ATENCION" && r.atiendeId === uid;
 }
 
+/** Urgente: heridos y niños solos que aún no se resolvieron. Se ven primero y con la marca «Urgente». */
+export function esReporteUrgente(r: ReporteVulnerabilidad): boolean {
+  return r.estado !== "RESUELTO" && TIPOS_CRITICOS.includes(r.tipo);
+}
+
 /** Abiertos primero, luego en atención, luego resueltos; dentro de cada grupo, el más reciente primero. */
 export function ordenarReportes(rs: ReporteVulnerabilidad[]): ReporteVulnerabilidad[] {
   const peso = { ABIERTO: 0, EN_ATENCION: 1, RESUELTO: 2 } as const;
+  return [...rs].sort(
+    (a, b) => peso[a.estado] - peso[b.estado] || b.creadoEn - a.creadoEn,
+  );
+}
+
+// ---- RF39: recursos críticos ----
+export const MIN_CANTIDAD = 1;
+export const MAX_CANTIDAD = 999;
+
+export type BorradorRecurso = {
+  modo: ModoRecurso | null;
+  tipo: TipoRecurso | null;
+  cantidad: number;
+  ubicacion: Coordenada | null;
+};
+
+export function limitarCantidad(n: number): number {
+  return Math.min(MAX_CANTIDAD, Math.max(MIN_CANTIDAD, Math.round(n)));
+}
+
+/** Devuelve los problemas del borrador; lista vacía = se puede publicar. */
+export function validarRecurso(b: BorradorRecurso): string[] {
+  const errores: string[] = [];
+  if (!b.modo) errores.push("Indica si ofreces o necesitas.");
+  if (!b.tipo) errores.push("Elige qué recurso es.");
+  if (b.cantidad < MIN_CANTIDAD || b.cantidad > MAX_CANTIDAD) {
+    errores.push("La cantidad debe ser entre 1 y 999.");
+  }
+  if (!b.ubicacion) errores.push("Falta la ubicación.");
+  return errores;
+}
+
+/** ABIERTO → ASIGNADO: cualquiera, salvo quien publicó el recurso. */
+export function puedeAsignarse(r: RecursoCritico, uid: string): boolean {
+  return r.estado === "ABIERTO" && r.autorId !== uid;
+}
+
+/** Solo quien publicó puede cerrar su recurso (ya entregado, ya no hace falta). */
+export function puedeCerrarRecurso(r: RecursoCritico, uid: string): boolean {
+  return r.autorId === uid && r.estado !== "CERRADO";
+}
+
+/** Abiertos primero, luego asignados, luego cerrados; dentro de cada grupo, el más reciente primero. */
+export function ordenarRecursos(rs: RecursoCritico[]): RecursoCritico[] {
+  const peso = { ABIERTO: 0, ASIGNADO: 1, CERRADO: 2 } as const;
   return [...rs].sort((a, b) => peso[a.estado] - peso[b.estado] || b.creadoEn - a.creadoEn);
+}
+
+export type FiltroRecursos = ModoRecurso | "TODOS";
+
+export function filtrarRecursos(rs: RecursoCritico[], filtro: FiltroRecursos): RecursoCritico[] {
+  return filtro === "TODOS" ? rs : rs.filter((r) => r.modo === filtro);
 }

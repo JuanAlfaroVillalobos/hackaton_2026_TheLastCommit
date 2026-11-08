@@ -38,6 +38,8 @@ export type ReporteVulnerabilidad = {
   atiendeId: string | null;
   canal: Canal;
   creadoEn: number;
+  /** El reporte lleva foto (se pide aparte con obtenerFotoReporte). */
+  tieneFoto?: boolean;
 };
 
 export type ModoRecurso = "OFREZCO" | "NECESITO";
@@ -87,6 +89,8 @@ export type FichaDirectorio = {
   horario: string;
   geohash: string;
   aprobado: boolean;
+  /** Solo en fichas propuestas por un vecino: quién la propuso (mientras `aprobado` sea false). */
+  propuestaPorId?: string;
 };
 
 export type Coordenada = { lat: number; lng: number };
@@ -95,4 +99,16 @@ export type Coordenada = { lat: number; lng: number };
 export type NuevoReporte = Pick<
   ReporteVulnerabilidad,
   "tipo" | "personas" | "nota" | "lat" | "lng"
+> & {
+  /** Foto opcional en JPEG codificado en base64 (sin prefijo). Solo con internet. */
+  foto?: string;
+};
+
+/** Lo que el vecino llena al publicar un recurso (RF39). El resto lo completa el servicio. */
+export type NuevoRecurso = Pick<RecursoCritico, "modo" | "tipo" | "cantidad" | "lat" | "lng">;
+
+/** Lo que el vecino llena al proponer una ficha (RF40). El resto lo completa el servicio. */
+export type NuevaFicha = Pick<
+  FichaDirectorio,
+  "nombre" | "tipo" | "telefono" | "whatsapp" | "direccion" | "horario"
 >;

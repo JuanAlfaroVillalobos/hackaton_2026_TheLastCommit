@@ -1,19 +1,25 @@
 // Ruta: src/modulos/ayuda-humanitaria/pantallas/ReportarVulnerabilidadPantalla.tsx
 // P21 · Reportar vulnerabilidad (RF38).
-// Pendiente: foto opcional (solo con internet, Firebase Storage) y envío por SMS tipo V sin internet (E7).
+// Foto opcional (solo con internet) y envío por SMS tipo V sin internet.
+import { useTema } from "@/compartido/tema";
 import { MapaBase } from "@/compartido/ui/MapaBase";
-import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ErrorApi } from "@/nucleo/api";
+import { useConexion } from "@/nucleo/red";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AvisoSinConexion } from "../componentes/AvisoSinConexion";
+import { MapaSinConexion } from "../componentes/MapaSinConexion";
 import {
-    ETIQUETA_TIPO_VULNERABILIDAD,
-    ICONO_TIPO_VULNERABILIDAD,
-    TEMA_EMERGENCIA as T,
-    TIPOS_VULNERABILIDAD,
+  ETIQUETA_TIPO_VULNERABILIDAD,
+  ICONO_TIPO_VULNERABILIDAD,
+  TIPOS_VULNERABILIDAD,
 } from "../constantes";
+import type { Colores } from "../estilos";
 import { limitarPersonas, MAX_NOTA, validarReporte } from "../reglas";
-import { crearReporte, obtenerUbicacionValidada } from "../servicios/reportesServicio";
+import { elegirFoto, type OrigenFoto } from "../servicios/fotoServicio";
+import { obtenerUbicacionValidada } from "../servicios/ubicacionServicio";
+import { avisoSms, enviarReporte } from "../sms/enviarAyuda";
 import type { Coordenada, TipoVulnerabilidad } from "../tipos";
 
 type Props = {
@@ -23,12 +29,16 @@ type Props = {
 };
 
 export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
+  const { colores: T, oscuro } = useTema();
+  const styles = useMemo(() => crearEstilos(T), [T]);
   const [tipo, setTipo] = useState<TipoVulnerabilidad | null>(null);
   const [personas, setPersonas] = useState(1);
   const [nota, setNota] = useState("");
   const [miUbicacion, setMiUbicacion] = useState<Coordenada | null>(null);
   const [pin, setPin] = useState<Coordenada | null>(null);
   const [otraPersona, setOtraPersona] = useState(false);
+  const { sinConexion } = useConexion();
+  const [foto, setFoto] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +46,7 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
     obtenerUbicacionValidada().then((u) => {
       setMiUbicacion(u);
       setPin(u);
-    });
+    }).catch(() => setError("No se pudo obtener tu ubicación."));
   }, []);
 
   const ubicacion = otraPersona ? pin : miUbicacion;
@@ -47,6 +57,16 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
     if (!valor) setPin(miUbicacion); // vuelve a mi ubicación
   }
 
+  async function tomarFoto(origen: OrigenFoto) {
+    try {
+      const f = await elegirFoto(origen);
+      if (f) setFoto(f);
+      else setError("No se pudo usar la foto. Revisa el permiso o prueba con otra.");
+    } catch {
+      setError("No se pudo abrir la cámara o la galería.");
+    }
+  }
+
   async function enviar() {
     if (errores.length > 0 || !tipo || !ubicacion) {
       setError(errores[0] ?? "Completa el formulario.");
@@ -55,10 +75,12 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
     setError(null);
     setEnviando(true);
     try {
-      await crearReporte({ tipo, personas, nota: nota.trim(), lat: ubicacion.lat, lng: ubicacion.lng });
+      const r = await enviarReporte({ tipo, personas, nota: nota.trim(), lat: ubicacion.lat, lng: ubicacion.lng, foto: sinConexion || !foto ? undefined : foto }, sinConexion);
+      const aviso = avisoSms(r, "reporte");
+      if (aviso) Alert.alert("Enviado por SMS", aviso);
       onEnviado?.();
-    } catch {
-      setError("No se pudo enviar el reporte. Inténtalo de nuevo.");
+    } catch (e) {
+      setError(e instanceof ErrorApi ? e.message : "No se pudo enviar el reporte. Inténtalo de nuevo.");
     } finally {
       setEnviando(false);
     }
@@ -66,7 +88,6 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
 
   return (
     <SafeAreaView style={styles.raiz} edges={["top", "bottom"]}>
-      <StatusBar style="light" />
       <View style={styles.barra}>
         <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={onVolver} hitSlop={12}>
           <Text style={styles.volver}>←</Text>
@@ -130,12 +151,35 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
           {nota.length}/{MAX_NOTA}
         </Text>
 
+        {sinConexion ? null : (
+          <View>
+            <Text style={styles.etiqueta}>Foto (opcional)</Text>
+            {foto ? (
+              <View>
+                <Image source={{ uri: `data:image/jpeg;base64,${foto}` }} style={styles.vistaFoto} resizeMode="cover" />
+                <Pressable accessibilityRole="button" onPress={() => setFoto(null)} style={styles.botonFoto}>
+                  <Text style={styles.botonFotoTexto}>Quitar foto</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.filaFoto}>
+                <Pressable accessibilityRole="button" onPress={() => tomarFoto("camara")} style={[styles.botonFoto, styles.botonFotoMitad]}>
+                  <Text style={styles.botonFotoTexto}>📷 Tomar foto</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={() => tomarFoto("galeria")} style={[styles.botonFoto, styles.botonFotoMitad]}>
+                  <Text style={styles.botonFotoTexto}>🖼️ Galería</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.filaSwitch}>
           <Text style={styles.switchTexto}>Reporto por otra persona</Text>
           <Switch
             value={otraPersona}
             onValueChange={alCambiarOtraPersona}
-            trackColor={{ true: T.primarioOscuro, false: T.borde }}
+            trackColor={{ true: T.primarioSuave, false: T.borde }}
             thumbColor={otraPersona ? T.primario : T.textoSecundario}
           />
         </View>
@@ -146,11 +190,16 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
         </Text>
 
         <View style={styles.mapa}>
-          {miUbicacion ? (
+          {sinConexion ? (
+            <MapaSinConexion
+              ubicacion={miUbicacion}
+              detalle="Se enviará tu ubicación actual por SMS. No se puede mover el pin sin conexión."
+            />
+          ) : miUbicacion ? (
             <MapaBase
               centro={miUbicacion}
               delta={0.006}
-              oscuro
+              oscuro={oscuro}
               onMapaPress={otraPersona ? setPin : undefined}
               marcadores={
                 ubicacion
@@ -169,6 +218,8 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
             />
           ) : null}
         </View>
+
+        {sinConexion ? <AvisoSinConexion /> : null}
 
         {error ? (
           <Text style={styles.error} accessibilityRole="alert">
@@ -189,14 +240,15 @@ export function ReportarVulnerabilidadPantalla({ onVolver, onEnviado }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (T: Colores) =>
+  StyleSheet.create({
   raiz: { flex: 1, backgroundColor: T.fondo },
   barra: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: T.alertaFondo,
+    backgroundColor: T.sos,
   },
   volver: { color: "#FFFFFF", fontSize: 24, marginRight: 14 },
   barraTitulo: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
@@ -214,7 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
-  tipoActivo: { borderColor: T.primario, backgroundColor: "#3A1717" },
+  tipoActivo: { borderColor: T.primario, backgroundColor: T.primarioSuave },
   tipoIcono: { fontSize: 22, marginRight: 8 },
   tipoTexto: { color: T.textoSecundario, fontSize: 13, flex: 1 },
   tipoTextoActivo: { color: T.texto, fontWeight: "700" },
@@ -245,8 +297,13 @@ const styles = StyleSheet.create({
   filaSwitch: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   switchTexto: { color: T.texto, fontSize: 15, fontWeight: "600" },
   ayuda: { color: T.textoSecundario, fontSize: 13, marginTop: 2, marginBottom: 10 },
+  filaFoto: { flexDirection: "row", gap: 10 },
+  botonFoto: { borderWidth: 1, borderColor: T.borde, backgroundColor: T.superficie, borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 8 },
+  botonFotoMitad: { flex: 1, marginTop: 0 },
+  botonFotoTexto: { color: T.texto, fontSize: 15, fontWeight: "700" },
+  vistaFoto: { width: "100%", height: 180, borderRadius: 14 },
   mapa: { height: 200, borderRadius: 14, overflow: "hidden", borderColor: T.borde, borderWidth: 1 },
-  error: { color: T.acento, fontSize: 14, fontWeight: "600", marginTop: 14 },
+  error: { color: T.primario, fontSize: 14, fontWeight: "600", marginTop: 14 },
   enviar: {
     backgroundColor: T.primario,
     borderRadius: 14,
