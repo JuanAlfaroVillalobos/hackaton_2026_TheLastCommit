@@ -26,6 +26,8 @@ export interface Usuario {
   ubicacionEn?: number | null;
   /** RF42: true si la ubicación se marcó moviendo el pin. */
   ubicacionManual?: boolean;
+  /** Tokens de FCM de los teléfonos con sesión abierta (README 5.4). No salen en /vecinos/yo. */
+  dispositivos?: string[];
 }
 
 // --- favores (P04, RF09) ---
