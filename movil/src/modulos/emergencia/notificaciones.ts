@@ -1,9 +1,10 @@
 // Ruta: src/modulos/emergencia/notificaciones.ts
 // Avisos del módulo «emergencia» (los envía api-mock/src/modulos/emergencia/zona.ts con notificar()).
-// Se registra al cargar este archivo, que importa src/nucleo/arranque.ts: así funciona con la app cerrada.
-//   - «alerta» (RF23): «¿Estás bien?» en el canal Emergencias, a pantalla completa con el teléfono
-//     bloqueado y como aviso flotante si está en uso, con las acciones «Estoy bien» / «Necesito ayuda»
-//     (RF24) que funcionan sin abrir la app. Fuera de Android (web, iOS) abre P12 dentro de la app.
+// Se registra al cargar este archivo, que importa movil/index.ts: así funciona con la app cerrada.
+//   - «alerta» (RF23): con la app abierta, abre P12 dentro de la app (todas las plataformas). Con la app
+//     en segundo plano o cerrada, notificación del canal Emergencias a pantalla completa (teléfono
+//     bloqueado) con las acciones «Estoy bien» / «Necesito ayuda» (RF24), que funcionan sin abrir la app.
+//     Esto último solo existe en Android con development build (no en Expo Go, web ni iOS).
 //   - «mapa»: silencioso; P11 vuelve a pedir los vecinos (RF22, RF24 ≤ 5 s).
 //   - «finalizada» (RF25): se quita la alerta y nucleo muestra el aviso.
 import { cabecerasSesion, fijarToken } from "@/nucleo/api";
@@ -16,7 +17,6 @@ import {
 import { CLAVE_TOKEN } from "@/nucleo/sesion";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 import { refrescarEmergencia, responder, useEmergenciaStore } from "./estado";
 
 /** Id fijo: cada reenvío de RF23 reemplaza al anterior en vez de apilarse. */
@@ -68,13 +68,13 @@ registrarManejadorNotificaciones("emergencia", {
         await asegurarToken();
         void refrescarEmergencia();
         if (useEmergenciaStore.getState().enAlerta) return true; // P12 ya está en pantalla
-        if (enPrimerPlano && Platform.OS !== "android") abrirAlerta();
-        else await mostrarAlerta(carga);
+        if (enPrimerPlano) abrirAlerta();
+        else await mostrarAlerta(carga).catch(() => undefined); // sin módulo nativo (Expo Go): queda el sondeo
         return true;
       }
 
       case "finalizada":
-        await quitarNotificacion(ID_NOTIFICACION_ALERTA);
+        await quitarNotificacion(ID_NOTIFICACION_ALERTA).catch(() => undefined);
         await asegurarToken();
         await refrescarEmergencia();
         return false; // nucleo muestra «La emergencia terminó»
@@ -84,7 +84,7 @@ registrarManejadorNotificaciones("emergencia", {
 
   alPulsar: async (_carga, accionId) => {
     if (accionId !== ACCION_A_SALVO && accionId !== ACCION_NECESITO_AYUDA) return;
-    await quitarNotificacion(ID_NOTIFICACION_ALERTA);
+    await quitarNotificacion(ID_NOTIFICACION_ALERTA).catch(() => undefined);
     await asegurarToken();
     await responder(accionId === ACCION_A_SALVO ? "A_SALVO" : "NECESITA_AYUDA").catch(() => undefined);
   },

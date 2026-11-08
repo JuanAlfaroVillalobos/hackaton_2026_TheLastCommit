@@ -13,7 +13,7 @@ export type Emergencia = {
   activadaEn: number;
   ultimaAlertaEn: number;
   finalizadaEn: number | null;
-  motivoFin: "TODOS_A_SALVO" | "SIN_ALERTAS" | null;
+  motivoFin: "TODOS_A_SALVO" | "SIN_ALERTAS" | "MANUAL" | null;
 };
 
 /** `emergencias/{id}/vecinos/{uid}`. */

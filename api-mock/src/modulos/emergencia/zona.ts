@@ -239,8 +239,23 @@ export async function finalizarSiCorresponde(emergencia: Emergencia, ahora = Dat
   const todosASalvo = vecinos.length > 0 && vecinos.every((v) => v.estado === 'A_SALVO');
   const inactiva = ahora - emergencia.ultimaAlertaEn >= CIERRE_SIN_ALERTAS_MS && !vecinos.some((v) => v.estado === 'NECESITA_AYUDA');
   if (!todosASalvo && !inactiva) return null;
+  return finalizar(emergencia, todosASalvo ? 'TODOS_A_SALVO' : 'SIN_ALERTAS', vecinos, ahora);
+}
 
-  const motivoFin = todosASalvo ? 'TODOS_A_SALVO' : 'SIN_ALERTAS';
+const CUERPO_FIN: Record<NonNullable<Emergencia['motivoFin']>, string> = {
+  TODOS_A_SALVO: 'Todos los vecinos de la zona están a salvo. Tu zona vuelve a la normalidad.',
+  SIN_ALERTAS: 'No hubo alertas nuevas en un buen rato. Tu zona vuelve a la normalidad.',
+  MANUAL: 'La emergencia se dio por terminada. Tu zona vuelve a la normalidad.',
+};
+
+/** Cierra la emergencia y avisa a la zona (RF25). */
+export async function finalizar(
+  emergencia: Emergencia,
+  motivoFin: NonNullable<Emergencia['motivoFin']>,
+  vecinos?: VecinoEnEmergencia[],
+  ahora = Date.now(),
+): Promise<Emergencia | null> {
+  vecinos ??= await vecinosDeEmergencia(emergencia.id).listar();
   const finalizada = await almacen.emergencias.actualizar(emergencia.id, { estado: 'FINALIZADA', finalizadaEn: ahora, motivoFin });
   if (vecinos.length) {
     await notificar(vecinos.map((v) => v.uid), {
@@ -248,10 +263,7 @@ export async function finalizarSiCorresponde(emergencia: Emergencia, ahora = Dat
       tipo: 'finalizada',
       canal: 'general',
       titulo: 'La emergencia terminó',
-      cuerpo:
-        motivoFin === 'TODOS_A_SALVO'
-          ? 'Todos los vecinos de la zona están a salvo. Tu zona vuelve a la normalidad.'
-          : 'No hubo alertas nuevas en un buen rato. Tu zona vuelve a la normalidad.',
+      cuerpo: CUERPO_FIN[motivoFin],
       ruta: '/',
       emergenciaId: emergencia.id,
     });

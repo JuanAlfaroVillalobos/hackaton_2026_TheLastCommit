@@ -225,7 +225,8 @@ export interface Emergencia {
   ultimaAlertaEn: number;
   finalizadaEn: number | null;
   /** RF25: por qué terminó. */
-  motivoFin: 'TODOS_A_SALVO' | 'SIN_ALERTAS' | null;
+  /** MANUAL: cerrada desde /dev (solo desarrollo). */
+  motivoFin: 'TODOS_A_SALVO' | 'SIN_ALERTAS' | 'MANUAL' | null;
 }
 
 export type EstadoVecinoEmergencia = 'SIN_RESPONDER' | 'NECESITA_AYUDA' | 'A_SALVO';
