@@ -4,6 +4,7 @@
 import { Router } from 'express';
 import { almacen } from '../../datos/almacen.js';
 import { ZONA_DEMO } from '../../datos/semillas.js';
+import { celdaDe } from '../emergencia/conteo.js';
 import type { Usuario } from '../../datos/tipos.js';
 import { abrirSesion, cerrarSesion, cerrarSesionesDe, leerToken, requiereSesion } from '../../nucleo/autenticacion.js';
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
@@ -49,6 +50,7 @@ rutasAuth.post('/registro', async (req, res) => {
     oficios: [],
     necesidadActivaId: null,
     ubicacion: ZONA_DEMO,
+    celdaH3: celdaDe(ZONA_DEMO.lat, ZONA_DEMO.lng),
     creadoEn: Date.now(),
     telefono,
     fotoUrl: null,

@@ -29,6 +29,8 @@ export interface Usuario {
   fotoUrl?: string | null;
   /** Momento de la última ubicación validada (RF42). */
   ubicacionEn?: number | null;
+  /** Celda H3 (res. 8) de `ubicacion`; la calcula la API. Con `ubicacionEn` define al «vecino activo» (RN-11). */
+  celdaH3?: string | null;
   /** RF42: true si la ubicación se marcó moviendo el pin. */
   ubicacionManual?: boolean;
   /** Tokens de FCM de los teléfonos con sesión abierta (README 5.4). No salen en /vecinos/yo. */

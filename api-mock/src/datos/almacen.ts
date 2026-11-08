@@ -43,14 +43,14 @@ export const almacen: {
   celdas: Repositorio<ConteoCelda>;
 } = {
   // --- en memoria ---
-  usuarios: new RepositorioMemoria(semillas.usuarios),
   publicaciones: new RepositorioMemoria(semillas.publicaciones),
   directorio: new RepositorioMemoria(semillas.directorio),
   vecinosEmergencia: new RepositorioMemoria(semillas.vecinosEmergencia),
   reportes: new RepositorioMemoria(semillas.reportes),
   recursos: new RepositorioMemoria(semillas.recursos),
   fichasEmergencia: new RepositorioMemoria(semillas.fichasEmergencia),
-  // --- migradas (Firestore con ALMACEN=firestore) ---
+  // --- migradas (Firestore con ALMACEN=firestore; con el emulador, `npm run sembrar` carga las cuentas) ---
+  usuarios: persistente('usuarios', semillas.usuarios),
   alertas: persistente('alertas', semillas.alertas),
   celdas: persistente('celdas'),
 };

@@ -8,6 +8,7 @@ import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo
 import { leerBuzon, notificar } from '../../nucleo/notificar.js';
 import { numero, texto } from '../../nucleo/utilidades.js';
 import { aPublico } from '../auth/rutas.js';
+import { celdaDe } from '../emergencia/conteo.js';
 import { borrarFotosIdentidad } from '../identidad/rutas.js';
 import { exigirTelefonoLibre, normalizarTelefono, validarNombre, validarOficios } from '../auth/validaciones.js';
 
@@ -69,6 +70,7 @@ rutasVecinos.post('/yo/ubicacion', async (req, res) => {
   const usuario = await almacen.usuarios.actualizar(res.locals.uid, {
     ubicacion: { lat, lng },
     ubicacionEn: Math.min(tomadaEn, Date.now()),
+    celdaH3: celdaDe(lat, lng),
     ubicacionManual: req.body?.manual === true,
   });
   if (!usuario) throw noEncontrado('El usuario');
