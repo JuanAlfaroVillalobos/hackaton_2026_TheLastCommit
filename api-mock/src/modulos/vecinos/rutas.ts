@@ -13,6 +13,15 @@ import { exigirTelefonoLibre, normalizarTelefono, validarNombre, validarOficios 
 export const rutasVecinos = Router();
 rutasVecinos.use(requiereSesion);
 
+/** Fotos de perfil (RF06). Son públicas dentro de la comunidad: las sirve /avatares/:uid sin sesión. */
+const avatares = new Map<string, { tipo: string; datos: Buffer }>();
+export const rutasAvatares = Router();
+rutasAvatares.get('/:uid', (req, res) => {
+  const foto = avatares.get(String(req.params.uid));
+  if (!foto) throw noEncontrado('La foto');
+  res.set('Cache-Control', 'public, max-age=86400').type(foto.tipo).send(foto.datos);
+});
+
 rutasVecinos.get('/yo', async (_req, res) => {
   const usuario = await almacen.usuarios.obtener(res.locals.uid);
   if (!usuario) throw noEncontrado('El usuario');
@@ -119,4 +128,31 @@ rutasVecinos.post('/yo/notificaciones/prueba', async (req, res) => {
     pantallaCompleta: canal === 'emergencias' ? 'si' : 'no',
   });
   res.status(201).json({ idNotificacion });
+});
+
+// ---------- Foto de perfil (RF06) ----------
+
+const MAX_AVATAR_BYTES = 1024 * 1024;
+
+/** Recibe la foto ya recortada y reducida por la app (512×512, JPEG) en data URI. */
+rutasVecinos.put('/yo/foto', async (req, res) => {
+  const uid: string = res.locals.uid;
+  const coincide =
+    typeof req.body?.imagen === 'string' ? /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.body.imagen) : null;
+  if (!coincide) throw datosInvalidos('Envía la foto como imagen JPEG, PNG o WebP.');
+  const datos = Buffer.from(coincide[2], 'base64');
+  if (datos.length > MAX_AVATAR_BYTES) throw datosInvalidos('La foto pesa más de 1 MB.');
+  avatares.set(uid, { tipo: coincide[1], datos });
+  // `v` cambia la URL para que la app no muestre la foto anterior guardada en caché.
+  const usuario = await almacen.usuarios.actualizar(uid, { fotoUrl: `/avatares/${uid}?v=${Date.now()}` });
+  if (!usuario) throw noEncontrado('El usuario');
+  res.json(aPublico(usuario));
+});
+
+rutasVecinos.delete('/yo/foto', async (_req, res) => {
+  const uid: string = res.locals.uid;
+  avatares.delete(uid);
+  const usuario = await almacen.usuarios.actualizar(uid, { fotoUrl: null });
+  if (!usuario) throw noEncontrado('El usuario');
+  res.json(aPublico(usuario));
 });

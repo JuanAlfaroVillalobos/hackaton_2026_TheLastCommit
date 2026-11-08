@@ -9,6 +9,7 @@ export { default as RecuperarClavePantalla } from './pantallas/RecuperarClavePan
 export { Avatar } from './componentes/Avatar';
 export { CajaAviso } from './componentes/CajaAviso';
 export { CampoTexto } from './componentes/CampoTexto';
+export { CasillaAceptar } from './componentes/CasillaAceptar';
 export { Pantalla } from './componentes/Pantalla';
 export { Separador } from './componentes/Separador';
 export { Titular } from './componentes/Titular';

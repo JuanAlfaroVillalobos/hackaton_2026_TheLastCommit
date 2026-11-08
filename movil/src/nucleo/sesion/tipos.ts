@@ -25,7 +25,13 @@ export interface PerfilVecino {
   /** Última ubicación validada (RF42). */
   ubicacion: Coordenada | null;
   ubicacionEn: number | null;
+  /** RF36: la insignia «Identidad verificada» solo aparece con VERIFICADA. */
+  estadoIdentidad: EstadoIdentidad;
+  /** Puede revisar identidades (equivale al custom claim `validador`). */
+  validador: boolean;
 }
+
+export type EstadoIdentidad = 'NO_ENVIADA' | 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
 
 /** Usuario tal como lo devuelve la API simulada (`aPublico` en api-mock/src/modulos/auth). */
 export interface UsuarioApi {
@@ -39,6 +45,8 @@ export interface UsuarioApi {
   necesidadActivaId?: string | null;
   ubicacion?: Coordenada | null;
   ubicacionEn?: number | null;
+  estadoIdentidad?: EstadoIdentidad;
+  validador?: boolean;
 }
 
 export interface DatosRegistro {

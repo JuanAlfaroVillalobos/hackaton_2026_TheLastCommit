@@ -9,12 +9,18 @@ import { abrirSesion, cerrarSesion, leerToken, requiereSesion } from '../../nucl
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
 import { randomInt } from 'node:crypto';
 import { nuevoId, texto } from '../../nucleo/utilidades.js';
+import { esValidador } from '../identidad/reglas.js';
 import { exigirTelefonoLibre, normalizarTelefono, validarClave, validarCorreo, validarNombre } from './validaciones.js';
 
-export type UsuarioPublico = Omit<Usuario, 'clave' | 'dispositivos'>;
+export type UsuarioPublico = Omit<Usuario, 'clave' | 'dispositivos' | 'identidad'> & {
+  /** RF36: solo el estado; el DNI y las fotos no salen de modulos/identidad. */
+  estadoIdentidad: NonNullable<Usuario['identidad']>['estado'];
+  /** Puede revisar identidades (pantalla oculta). */
+  validador: boolean;
+};
 
-export function aPublico({ clave: _clave, dispositivos: _dispositivos, ...resto }: Usuario): UsuarioPublico {
-  return resto;
+export function aPublico({ clave: _clave, dispositivos: _dispositivos, identidad, ...resto }: Usuario): UsuarioPublico {
+  return { ...resto, estadoIdentidad: identidad?.estado ?? 'NO_ENVIADA', validador: esValidador(resto) };
 }
 
 export const rutasAuth = Router();

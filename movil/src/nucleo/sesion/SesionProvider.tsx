@@ -53,6 +53,8 @@ const PERFIL_DEMO: PerfilVecino = {
   necesidadActivaId: null,
   ubicacion: { lat: -8.1116, lng: -79.0288 },
   ubicacionEn: null,
+  estadoIdentidad: 'NO_ENVIADA',
+  validador: false,
 };
 
 const SesionContext = createContext<EstadoSesion | null>(null);
@@ -74,6 +76,8 @@ function aPerfil(u: UsuarioApi): PerfilVecino {
     necesidadActivaId: u.necesidadActivaId ?? null,
     ubicacion: u.ubicacion ?? null,
     ubicacionEn: u.ubicacionEn ?? null,
+    estadoIdentidad: u.estadoIdentidad ?? 'NO_ENVIADA',
+    validador: u.validador ?? false,
   };
 }
 

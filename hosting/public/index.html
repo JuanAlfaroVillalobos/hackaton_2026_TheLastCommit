@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es-PE">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vecinos · Descarga la app</title>
+  <meta name="description" content="Descarga Vecinos para Android: pide y ofrece ayuda entre vecinos, y mantente a salvo en una emergencia.">
+  <meta name="theme-color" content="#C2410C">
+  <link rel="stylesheet" href="/recursos/estilos.css">
+</head>
+<body>
+  <main>
+    <header class="marca">
+      <div class="logo" aria-hidden="true">V</div>
+      <strong>Vecinos</strong>
+    </header>
+
+    <h1>Tu barrio, más cerca.</h1>
+    <p>Pide y ofrece ayuda entre vecinos, encuentra servicios cerca de ti y coordina con tu zona en una emergencia, incluso sin internet.</p>
+
+    <div class="tarjeta">
+      <a id="descargar" class="boton" href="#" aria-disabled="true">Descargar para Android</a>
+      <p class="meta" id="detalle">Cargando la última versión…</p>
+    </div>
+
+    <h2>Cómo instalarla</h2>
+    <ol class="pasos">
+      <li>Toca <strong>Descargar para Android</strong> desde tu celular.</li>
+      <li>Abre el archivo descargado (<code>vecinos.apk</code>) desde la notificación o la carpeta Descargas.</li>
+      <li>Si Android lo pide, permite <strong>instalar apps de esta fuente</strong> para tu navegador.</li>
+      <li>Toca <strong>Instalar</strong> y luego <strong>Abrir</strong>. Verás el tutorial de bienvenida.</li>
+    </ol>
+
+    <div class="aviso" role="note">
+      <p>Vecinos no te pedirá dinero, claves bancarias ni códigos por SMS. Tu DNI y tu celular nunca se muestran a otros vecinos.</p>
+    </div>
+
+    <footer>
+      Vecinos · Proyecto de la hackatón del equipo TheLastCommit ·
+      <a href="/privacidad">Política de privacidad</a>
+    </footer>
+  </main>
+
+  <script>
+    // descarga.json lo actualiza Persona A después de cada build `preview` de EAS.
+    fetch('/descarga.json', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        const boton = document.getElementById('descargar');
+        const detalle = document.getElementById('detalle');
+        if (!d.url) {
+          detalle.textContent = 'La primera versión estará disponible muy pronto.';
+          return;
+        }
+        boton.href = d.url;
+        boton.removeAttribute('aria-disabled');
+        const partes = ['Versión ' + d.version];
+        if (d.tamanoMb) partes.push(d.tamanoMb + ' MB');
+        if (d.fecha) partes.push('publicada el ' + new Date(d.fecha).toLocaleDateString('es-PE', { day: 'numeric', month: 'long' }));
+        detalle.textContent = partes.join(' · ');
+      })
+      .catch(() => {
+        document.getElementById('detalle').textContent = 'No pudimos cargar la descarga. Recarga la página.';
+      });
+  </script>
+</body>
+</html>
