@@ -73,3 +73,5 @@ node_modules/
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
+# Datos exportados del emulador de Firebase (--import/--export-on-exit)
+.emulador/

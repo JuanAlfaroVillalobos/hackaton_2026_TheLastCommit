@@ -1,12 +1,13 @@
 // Ruta: src/nucleo/autenticacion.ts
 // Quién hace la petición. Dos modos, según AUTENTICACION en .env:
 //  - firebase: el token es un ID token de Firebase Auth y se verifica con firebase-admin.
-//  - local (por defecto): el token es un UUID guardado en la colección `sesiones` (Firestore con
-//    ALMACEN=firestore; memoria si no), para trabajar sin emulador.
+//  - local (por defecto): el token es un UUID guardado en `sesiones/{token}` (Firestore con
+//    ALMACEN=firestore, así un reinicio de la API no saca a todos de la app; memoria si no).
 // En ambos, el uid queda en `res.locals.uid` y las rutas no cambian.
 import { randomUUID } from 'node:crypto';
 import type { RequestHandler } from 'express';
 import { almacen } from '../datos/almacen.js';
+import type { Sesion } from '../datos/tipos.js';
 import { ErrorHttp } from './errores.js';
 import { revocarSesionesAuth, USA_FIREBASE_AUTH, verificarToken } from './firebaseAuth.js';
 
@@ -24,13 +25,15 @@ export interface TokensSesion {
   expiraEn: number;
 }
 
+const venceEn = (s: Sesion) => s.venceEn ?? s.creadoEn + DURACION_MS;
+
 /**
  * @description Abre una sesión local para el usuario y devuelve su token (modo local).
  */
 export async function abrirSesion(uid: string): Promise<TokensSesion> {
   const token = randomUUID();
   const ahora = Date.now();
-  await almacen.sesiones.crear({ id: token, uid, creadaEn: ahora, venceEn: ahora + DURACION_MS });
+  await almacen.sesiones.guardar({ id: token, uid, creadoEn: ahora, venceEn: ahora + DURACION_MS });
   cache.set(token, { uid, hasta: ahora + CACHE_MS });
   return { token, renovacion: null, expiraEn: ahora + DURACION_MS };
 }
@@ -66,7 +69,7 @@ async function uidDeTokenLocal(token: string): Promise<string | null> {
   if (enCache && enCache.hasta > Date.now()) return enCache.uid;
 
   const sesion = await almacen.sesiones.obtener(token);
-  if (!sesion || sesion.venceEn < Date.now()) {
+  if (!sesion || venceEn(sesion) < Date.now()) {
     cache.delete(token);
     if (sesion) await almacen.sesiones.eliminar(token).catch(() => undefined);
     return null;
@@ -82,18 +85,22 @@ export const requiereSesion: RequestHandler = async (req, res, next) => {
     next(new ErrorHttp(401, 'SIN_SESION', 'Inicia sesión para continuar.'));
     return;
   }
-  if (USA_FIREBASE_AUTH) {
-    const decodificado = await verificarToken(token);
-    res.locals.uid = decodificado.uid;
-    res.locals.correoVerificado = decodificado.email_verified === true;
+  try {
+    if (USA_FIREBASE_AUTH) {
+      const decodificado = await verificarToken(token);
+      res.locals.uid = decodificado.uid;
+      res.locals.correoVerificado = decodificado.email_verified === true;
+      next();
+      return;
+    }
+    const uid = await uidDeTokenLocal(token);
+    if (!uid) {
+      next(new ErrorHttp(401, 'SIN_SESION', 'Inicia sesión para continuar.'));
+      return;
+    }
+    res.locals.uid = uid;
     next();
-    return;
+  } catch (error) {
+    next(error);
   }
-  const uid = await uidDeTokenLocal(token);
-  if (!uid) {
-    next(new ErrorHttp(401, 'SIN_SESION', 'Inicia sesión para continuar.'));
-    return;
-  }
-  res.locals.uid = uid;
-  next();
 };

@@ -65,6 +65,24 @@ export function errorDeFirebase(codigo: string): ErrorHttp {
     case 'WEAK_PASSWORD':
     case 'auth/invalid-password':
       return new ErrorHttp(400, 'DATOS_INVALIDOS', 'La clave no cumple los requisitos de seguridad.');
+    case 'OPERATION_NOT_ALLOWED':
+    case 'PASSWORD_LOGIN_DISABLED':
+      console.error('[firebaseAuth] Activa «Correo electrónico/contraseña» en la consola: Authentication → Método de acceso.');
+      return new ErrorHttp(503, 'AUTH_NO_DISPONIBLE', 'El ingreso con correo aún no está activado. Inténtalo en un momento.');
+    case 'API':
+    case 'API_KEY_INVALID':
+    case 'CONFIGURATION_NOT_FOUND':
+      console.error(
+        '[firebaseAuth] Revisa FIREBASE_WEB_API_KEY en .env (Configuración del proyecto → General → app web → apiKey) y que Authentication esté iniciado en la consola.',
+      );
+      return new ErrorHttp(503, 'AUTH_NO_DISPONIBLE', 'No pudimos conectar con el servicio de cuentas. Inténtalo en un momento.');
+    case 'app/invalid-credential':
+    case 'auth/invalid-credential':
+    case 'auth/insufficient-permission':
+      console.error(
+        '[firebaseAuth] Falta la cuenta de servicio: guarda la clave en api-mock/credenciales/cuenta-servicio.json y define GOOGLE_APPLICATION_CREDENTIALS en .env.',
+      );
+      return new ErrorHttp(503, 'AUTH_NO_DISPONIBLE', 'No pudimos conectar con el servicio de cuentas. Inténtalo en un momento.');
     default:
       console.error('[firebaseAuth] error no previsto:', codigo);
       return new ErrorHttp(502, 'AUTH_NO_DISPONIBLE', 'No pudimos conectar con el servicio de cuentas. Inténtalo en un momento.');

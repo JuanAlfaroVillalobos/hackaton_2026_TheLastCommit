@@ -7,6 +7,15 @@ export interface Coordenada {
   lng: number;
 }
 
+/** `sesiones/{token}`: sesión del modo local (AUTENTICACION=local). Con Firebase Auth no se usa. */
+export interface Sesion {
+  id: string;
+  uid: string;
+  creadoEn: number;
+  /** Modo local: la sesión vence a los 30 días. Si falta (sesiones antiguas), se cuenta desde creadoEn. */
+  venceEn?: number;
+}
+
 /** Cuenta + perfil. `clave` nunca sale de la API (ver aPublico en modulos/auth). */
 export interface Usuario {
   id: string;
@@ -29,6 +38,8 @@ export interface Usuario {
   fotoUrl?: string | null;
   /** Momento de la última ubicación validada (RF42). */
   ubicacionEn?: number | null;
+  /** Celda H3 (res. 8) de `ubicacion`; la calcula la API. Con `ubicacionEn` define al «vecino activo» (RN-11). */
+  celdaH3?: string | null;
   /** RF42: true si la ubicación se marcó moviendo el pin. */
   ubicacionManual?: boolean;
   /** Tokens de FCM de los teléfonos con sesión abierta (README 5.4). No salen en /vecinos/yo. */
@@ -189,6 +200,8 @@ export interface AlertaEmergencia {
   estado: 'ACTIVA' | 'ATENDIDA' | 'CANCELADA';
   canal: 'APP' | 'SMS';
   creadoEn: number;
+  /** Emergencia a la que se sumó la alerta (RF21), si la hubo. */
+  emergenciaId?: string | null;
 }
 
 /**
@@ -208,14 +221,6 @@ export interface ConteoCelda {
 }
 
 // --- nucleo y cuentas (Persona A): colecciones de soporte en Firestore ---
-
-/** Sesión abierta. El id es el token que la app manda en `Authorization: Bearer`. */
-export interface Sesion {
-  id: string;
-  uid: string;
-  creadaEn: number;
-  venceEn: number;
-}
 
 /** Código de 6 dígitos para recuperar la clave (RF07). El id es el correo. */
 export interface CodigoClave {
@@ -259,4 +264,40 @@ export interface ArchivoGuardado {
   base64: string;
   bytes: number;
   guardadoEn: number;
+}
+
+// --- modo emergencia (RF21–RF25, README 5.2) ---
+/** Firestore: `emergencias/{id}`. Cubre la celda que cruzó el umbral y sus 6 vecinas (RN-11). */
+export interface Emergencia {
+  id: string;
+  celdaCentro: string;
+  /** Centro de celdaCentro, para centrar el mapa de P11. */
+  centro: Coordenada;
+  /** celdaCentro + sus 6 vecinas (k = 1). */
+  celdas: string[];
+  estado: 'ACTIVA' | 'FINALIZADA';
+  activadaEn: number;
+  ultimaAlertaEn: number;
+  finalizadaEn: number | null;
+  /** RF25: por qué terminó. */
+  /** MANUAL: cerrada desde /dev (solo desarrollo). */
+  motivoFin: 'TODOS_A_SALVO' | 'SIN_ALERTAS' | 'MANUAL' | null;
+}
+
+export type EstadoVecinoEmergencia = 'SIN_RESPONDER' | 'NECESITA_AYUDA' | 'A_SALVO';
+
+/** Firestore: `emergencias/{id}/vecinos/{uid}`. El id es el uid del vecino. */
+export interface VecinoEnEmergencia {
+  id: string;
+  uid: string;
+  nombre: string;
+  estado: EstadoVecinoEmergencia;
+  lat: number;
+  lng: number;
+  /** Última alerta o «Necesito ayuda»; null si nunca pidió ayuda (entró como SIN_RESPONDER). */
+  ultimaAlertaEn: number | null;
+  /** Última vez que respondió en P12 (RF24). */
+  respondidoEn: number | null;
+  /** Momento en que entró a la emergencia. */
+  creadoEn: number;
 }

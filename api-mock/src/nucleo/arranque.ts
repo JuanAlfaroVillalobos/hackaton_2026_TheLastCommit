@@ -6,7 +6,8 @@
 //  2. Firebase Auth: crea las cuentas de prueba (ana@vecinos.pe, …) con su mismo uid y la clave de demo.
 import { almacen, sembrarFirestore, USA_FIRESTORE } from '../datos/almacen.js';
 import { CLAVE_DEMO, usuarios as usuariosSemilla } from '../datos/semillas.js';
-import { crearCuentaAuth, obtenerCuentaAuth, problemaConfiguracionAuth, USA_FIREBASE_AUTH } from './firebaseAuth.js';
+import { ErrorHttp } from './errores.js';
+import { crearCuentaAuth, ingresarConClave, obtenerCuentaAuth, problemaConfiguracionAuth, USA_FIREBASE_AUTH } from './firebaseAuth.js';
 
 const mensaje = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -38,7 +39,18 @@ async function prepararAuth(): Promise<string> {
     const perfil = await almacen.usuarios.obtener(semilla.id);
     if (perfil?.clave) await almacen.usuarios.actualizar(semilla.id, { clave: '' });
   }
-  return `cuentas de prueba creadas: ${creadas}`;
+  // Prueba de ingreso con la cuenta de Ana: detecta al arrancar si falta activar Correo/contraseña o la clave web.
+  let prueba = 'ingreso con correo OK';
+  try {
+    await ingresarConClave(usuariosSemilla[0].correo, CLAVE_DEMO);
+  } catch (error) {
+    const codigo = error instanceof ErrorHttp ? error.codigo : '';
+    // Si alguien cambió la clave de Ana, Firebase igual respondió: la configuración está bien.
+    if (codigo !== 'CREDENCIALES_INVALIDAS' && codigo !== 'DEMASIADOS_INTENTOS') {
+      prueba = `⚠ el ingreso con correo falla (${mensaje(error)}). Mira el mensaje [firebaseAuth] de arriba.`;
+    }
+  }
+  return `cuentas de prueba creadas: ${creadas}; ${prueba}`;
 }
 
 /**
@@ -50,14 +62,26 @@ export async function prepararDatos(): Promise<string[]> {
     try {
       lineas.push(`Firestore: ${await prepararFirestore()}`);
     } catch (error) {
-      lineas.push(`⚠ Firestore no respondió (${mensaje(error)}). ¿Está encendido el emulador o son válidas las credenciales?`);
+      lineas.push(
+        `⚠ Firestore no respondió (${mensaje(error)}). ${
+          process.env.FIRESTORE_EMULATOR_HOST
+            ? '¿Está encendido el emulador?'
+            : '¿Existe credenciales/cuenta-servicio.json y la base de datos Firestore está creada en la consola?'
+        }`,
+      );
     }
   }
   if (USA_FIREBASE_AUTH) {
     try {
       lineas.push(`Firebase Auth: ${await prepararAuth()}`);
     } catch (error) {
-      lineas.push(`⚠ Firebase Auth no respondió (${mensaje(error)}). ¿Está encendido el emulador de Auth?`);
+      lineas.push(
+        `⚠ Firebase Auth no respondió (${mensaje(error)}). ${
+          process.env.FIREBASE_AUTH_EMULATOR_HOST
+            ? '¿Está encendido el emulador de Auth?'
+            : '¿Existe credenciales/cuenta-servicio.json y Authentication está iniciado en la consola?'
+        }`,
+      );
     }
   }
   return lineas;

@@ -6,7 +6,7 @@ import type { EstadoReporte, EstadoVecino, TipoVulnerabilidad } from "./tipos";
 export const COLOR_ESTADO: Record<EstadoVecino, string> = {
   NECESITA_AYUDA: "#FF5252",
   SIN_RESPONDER: "#FFC400",
-  ESTOY_BIEN: "#4ADE80",
+  A_SALVO: "#4ADE80",
 };
 
 // El color nunca va solo: cada estado lleva también un icono y un texto.
@@ -14,13 +14,13 @@ export const COLOR_ESTADO: Record<EstadoVecino, string> = {
 export const ICONO_ESTADO: Record<EstadoVecino, string> = {
   NECESITA_AYUDA: "🆘",
   SIN_RESPONDER: "📵",
-  ESTOY_BIEN: "✓",
+  A_SALVO: "✓",
 };
 
 export const ETIQUETA_ESTADO: Record<EstadoVecino, string> = {
   NECESITA_AYUDA: "Necesita ayuda",
   SIN_RESPONDER: "Sin responder",
-  ESTOY_BIEN: "Está bien",
+  A_SALVO: "A salvo",
 };
 
 // ---- RF38: reporte de vulnerabilidad ----

@@ -8,6 +8,7 @@ import { randomInt } from 'node:crypto';
 import { Router } from 'express';
 import { almacen } from '../../datos/almacen.js';
 import { ZONA_DEMO } from '../../datos/semillas.js';
+import { celdaDe } from '../emergencia/conteo.js';
 import type { Usuario } from '../../datos/tipos.js';
 import {
   abrirSesion,
@@ -76,6 +77,7 @@ rutasAuth.post('/registro', async (req, res) => {
     oficios: [],
     necesidadActivaId: null,
     ubicacion: ZONA_DEMO,
+    celdaH3: celdaDe(ZONA_DEMO.lat, ZONA_DEMO.lng),
     creadoEn: Date.now(),
     telefono,
     fotoUrl: null,
@@ -181,6 +183,7 @@ async function perfilDe(uid: string, correo: string): Promise<Usuario> {
     oficios: [],
     necesidadActivaId: null,
     ubicacion: ZONA_DEMO,
+    celdaH3: celdaDe(ZONA_DEMO.lat, ZONA_DEMO.lng),
     creadoEn: Date.now(),
     telefono: null,
     fotoUrl: null,

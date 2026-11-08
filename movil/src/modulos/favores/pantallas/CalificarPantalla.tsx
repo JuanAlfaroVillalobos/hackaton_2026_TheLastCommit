@@ -1,5 +1,7 @@
 import { Boton } from "@/compartido/ui";
 import { ESPACIO, TIPO, useTema } from "@/compartido/tema";
+import { proponerVistoBueno } from "@/modulos/directorio";
+import { useSesion } from "@/nucleo/sesion";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
@@ -13,6 +15,7 @@ export function CalificarPantalla({ id }: { id: string }) {
   const { colores } = useTema();
   const router = useRouter();
   const vecino = useVecinoActual();
+  const { perfil } = useSesion();
   const [publicacion, setPublicacion] = useState<PublicacionConAutor | null>(null);
   const [cargando, setCargando] = useState(true);
   const [estrellas, setEstrellas] = useState(5);
@@ -38,6 +41,16 @@ export function CalificarPantalla({ id }: { id: string }) {
     setError(null);
     try {
       await calificarPublicacion(id, estrellas);
+      // B7 (RF33): si calificó bien al prestador, se le invita a darle un Visto Bueno en el directorio.
+      const calificadoUid = publicacion?.solicitanteId === vecino.uid ? publicacion.prestadorId : null;
+      if (perfil && publicacion && calificadoUid) {
+        await proponerVistoBueno({
+          prestadorUid: calificadoUid,
+          prestadorNombre: publicacion.perfilPrestador?.nombre,
+          estrellas,
+          perfil,
+        });
+      }
       router.replace(hrefDetalleFavor(id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar tu calificación.");

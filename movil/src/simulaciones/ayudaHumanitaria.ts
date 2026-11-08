@@ -19,7 +19,7 @@ export const vecinosEmergenciaMock: VecinoEmergencia[] = [
   { uid: "u01", nombre: "Rosa Quispe", estado: "NECESITA_AYUDA", lat: -8.1108, lng: -79.0279, ultimaAlertaEn: hace(2) },
   { uid: "u02", nombre: "Carlos Vásquez", estado: "SIN_RESPONDER", lat: -8.1124, lng: -79.0301, ultimaAlertaEn: hace(6) },
   { uid: "u03", nombre: "Marta Ruiz", estado: "NECESITA_AYUDA", lat: -8.1099, lng: -79.0295, ultimaAlertaEn: hace(1) },
-  { uid: "u04", nombre: "Luis Cabrera", estado: "ESTOY_BIEN", lat: -8.1131, lng: -79.0272, ultimaAlertaEn: hace(15) },
+  { uid: "u04", nombre: "Luis Cabrera", estado: "A_SALVO", lat: -8.1131, lng: -79.0272, ultimaAlertaEn: hace(15) },
   { uid: "u05", nombre: "Elena Paredes", estado: "SIN_RESPONDER", lat: -8.1112, lng: -79.0312, ultimaAlertaEn: hace(9) },
 ];
 
