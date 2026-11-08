@@ -52,6 +52,7 @@ const config: ExpoConfig = {
     '@react-native-firebase/messaging',
     '@react-native-google-signin/google-signin',
     'react-native-notify-kit',
+    './plugins/withPantallaBloqueo.js',
     [
       'expo-location',
       {

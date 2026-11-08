@@ -6,6 +6,7 @@ import { ESPACIO, MAX_ESCALA_FUENTE, RADIO, TACTIL_MIN, useTema } from "@/compar
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, ToastAndroid } from "react-native";
+import { refrescarEmergencia } from "../estado";
 import { registrarAlerta } from "../servicios/alertaServicio";
 
 const PULSACION_MS = 2000;
@@ -26,6 +27,8 @@ export function BotonSos() {
           try {
             await registrarAlerta();
             ToastAndroid.show("Alerta enviada", ToastAndroid.SHORT);
+            // Si esta alerta completó el umbral (RF21), la app entra al modo emergencia sin esperar el push.
+            void refrescarEmergencia();
           } catch (error) {
             Alert.alert("No se pudo enviar la alerta", error instanceof Error ? error.message : "Inténtalo de nuevo.");
           } finally {
