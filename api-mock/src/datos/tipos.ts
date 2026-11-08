@@ -30,6 +30,17 @@ export interface Usuario {
   dispositivos?: string[];
   /** Momento en que aceptó la política de privacidad (Ley 29733). */
   terminosAceptadosEn?: number;
+  /** Verificación de identidad (RF36). Nunca sale entera de la API: ver modulos/identidad. */
+  identidad?: {
+    estado: 'NO_ENVIADA' | 'PENDIENTE' | 'VERIFICADA' | 'RECHAZADA';
+    dni: string;
+    nombres: string;
+    apellidos: string;
+    enviadaEn: number | null;
+    revisadaEn: number | null;
+    motivo: string | null;
+    revisadaPor?: string;
+  };
 }
 
 // --- favores (P04, RF09) ---

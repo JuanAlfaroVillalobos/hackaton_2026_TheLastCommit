@@ -23,11 +23,39 @@
     }
   ],
   "hosting": {
-    "public": "public",
+    "public": "hosting/public",
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "**/.gitkeep",
+      "**/LEEME.md"
+    ],
+    "rewrites": [
+      {
+        "source": "/s/**",
+        "destination": "/s.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/.well-known/assetlinks.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      {
+        "source": "/descarga.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
     ]
   },
   "storage": {

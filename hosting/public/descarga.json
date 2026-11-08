@@ -1,0 +1,7 @@
+{
+  "version": "0.1.0",
+  "url": "",
+  "fecha": "",
+  "tamanoMb": null,
+  "nota": "Después de cada `npm run build:preview` en movil/, pega aquí la URL del APK que muestra EAS y vuelve a desplegar el hosting."
+}

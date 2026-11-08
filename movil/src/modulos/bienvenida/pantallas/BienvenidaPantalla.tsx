@@ -11,7 +11,7 @@ const PILARES: { icono: NombreIcono; titulo: string; texto: string }[] = [
 ];
 
 /**
- * @description Bienvenida (P20, RF37): presenta los tres pilares de la app; el tutorial de 4 pasos llega en A8.
+ * @description Bienvenida (P20, RF37): presenta los tres pilares de la app después del tutorial.
  */
 export default function BienvenidaPantalla() {
   const { colores } = useTema();

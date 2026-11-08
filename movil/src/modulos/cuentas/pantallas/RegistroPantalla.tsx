@@ -4,8 +4,8 @@ import { ErrorApi } from '@/nucleo/api';
 import { useSesion } from '@/nucleo/sesion';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View, type TextInputInstance } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Linking, Pressable, StyleSheet, Text, View, type TextInputInstance } from 'react-native';
 import { CajaAviso } from '../componentes/CajaAviso';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { CasillaAceptar } from '../componentes/CasillaAceptar';
@@ -28,6 +28,9 @@ import {
 } from '../validaciones';
 
 type CampoEditable = Exclude<CampoRegistro, 'terminos'>;
+/** Página pública de la política (hosting/public/privacidad.html). */
+const URL_PRIVACIDAD = 'https://vecinos-thelastcommit.web.app/privacidad';
+
 const ORDEN: CampoRegistro[] = ['nombre', 'correo', 'telefono', 'clave', 'confirmacion', 'terminos'];
 
 const MENSAJE_OCUPADO = {
@@ -57,16 +60,22 @@ export default function RegistroPantalla() {
     telefono: 'desconocido',
   });
   const [enviando, setEnviando] = useState(false);
+  // Último valor de los datos para las respuestas asíncronas (disponibilidad).
   const datosActuales = useRef(datos);
-  datosActuales.current = datos;
+  useEffect(() => {
+    datosActuales.current = datos;
+  });
 
-  const refs = {
-    nombre: useRef<TextInputInstance>(null),
-    correo: useRef<TextInputInstance>(null),
-    telefono: useRef<TextInputInstance>(null),
-    clave: useRef<TextInputInstance>(null),
-    confirmacion: useRef<TextInputInstance>(null),
-  } satisfies Record<CampoEditable, unknown>;
+  // Campos de texto, para mover el foco con «Siguiente» y al primer error.
+  const refNombre = useRef<TextInputInstance>(null);
+  const refCorreo = useRef<TextInputInstance>(null);
+  const refTelefono = useRef<TextInputInstance>(null);
+  const refClave = useRef<TextInputInstance>(null);
+  const refConfirmacion = useRef<TextInputInstance>(null);
+  const enfocar = (campo: CampoEditable) => {
+    const refs = { nombre: refNombre, correo: refCorreo, telefono: refTelefono, clave: refClave, confirmacion: refConfirmacion };
+    refs[campo].current?.focus();
+  };
 
   const errores = validarRegistro(datos);
   const contextoClave = { nombre: datos.nombre, correo: datos.correo, telefono: datos.telefono };
@@ -81,7 +90,7 @@ export default function RegistroPantalla() {
   };
   const correcto = (campo: CampoRegistro) => Boolean(tocados[campo] || intentado) && !errorVisible(campo);
 
-  const cambiar = (campo: CampoEditable) => (valor: string) => {
+  const cambiar = (campo: CampoEditable, valor: string) => {
     const limpio = campo === 'telefono' ? valor.replace(/\D/g, '').slice(0, 9) : valor;
     setDatos((d) => ({ ...d, [campo]: limpio }));
     setErroresApi((e) => ({ ...e, [campo]: undefined }));
@@ -97,7 +106,7 @@ export default function RegistroPantalla() {
     if (datosActuales.current[campo] === valor) setDisponible((d) => ({ ...d, [campo]: resultado }));
   };
 
-  const salir = (campo: CampoEditable) => () => {
+  const salir = (campo: CampoEditable) => {
     setTocados((t) => ({ ...t, [campo]: true }));
     if (campo === 'nombre' && datos.nombre.trim()) setDatos((d) => ({ ...d, nombre: normalizarNombre(d.nombre) }));
     if (campo === 'correo') {
@@ -119,7 +128,7 @@ export default function RegistroPantalla() {
     const conError = ORDEN.find((c) => errorVisible(c) ?? errores[c]);
     if (conError) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
-      if (conError !== 'terminos') refs[conError].current?.focus();
+      if (conError !== 'terminos') enfocar(conError);
       return;
     }
 
@@ -140,7 +149,7 @@ export default function RegistroPantalla() {
       if (error instanceof ErrorApi && error.estado === 409) {
         const campo = /correo/i.test(mensaje) ? 'correo' : 'telefono';
         setDisponible((d) => ({ ...d, [campo]: 'ocupado' }));
-        refs[campo].current?.focus();
+        enfocar(campo);
       } else if (error instanceof ErrorApi && error.estado === 400) {
         // La API devuelve el primer problema; se muestra en el campo al que se refiere.
         const campo: CampoRegistro = /clave/i.test(mensaje)
@@ -170,12 +179,12 @@ export default function RegistroPantalla() {
 
       <View style={styles.formulario}>
         <CampoTexto
-          ref={refs.nombre}
+          ref={refNombre}
           etiqueta="Nombre y apellido"
           icono="person"
           valor={datos.nombre}
-          onCambiar={cambiar('nombre')}
-          onSalir={salir('nombre')}
+          onCambiar={(v) => cambiar('nombre', v)}
+          onSalir={() => salir('nombre')}
           placeholder="Ej.: Ana Morales"
           autoComplete="name"
           textContentType="name"
@@ -184,19 +193,19 @@ export default function RegistroPantalla() {
           maxLength={LIMITES.nombre}
           returnKeyType="next"
           submitBehavior="submit"
-          onSubmitEditing={() => refs.correo.current?.focus()}
+          onSubmitEditing={() => enfocar('correo')}
           ayuda="Así te verán tus vecinos. Usa tu nombre real."
           error={errorVisible('nombre')}
           exito={correcto('nombre')}
         />
 
         <CampoTexto
-          ref={refs.correo}
+          ref={refCorreo}
           etiqueta="Correo"
           icono="mail"
           valor={datos.correo}
-          onCambiar={cambiar('correo')}
-          onSalir={salir('correo')}
+          onCambiar={(v) => cambiar('correo', v)}
+          onSalir={() => salir('correo')}
           placeholder="tucorreo@ejemplo.com"
           keyboardType="email-address"
           autoComplete="email"
@@ -206,7 +215,7 @@ export default function RegistroPantalla() {
           maxLength={LIMITES.correo}
           returnKeyType="next"
           submitBehavior="submit"
-          onSubmitEditing={() => refs.telefono.current?.focus()}
+          onSubmitEditing={() => enfocar('telefono')}
           error={errorVisible('correo')}
           exito={correcto('correo') && disponible.correo === 'libre' ? 'Correo disponible.' : correcto('correo')}
           ayuda={disponible.correo === 'revisando' ? 'Revisando…' : undefined}
@@ -237,13 +246,13 @@ export default function RegistroPantalla() {
         </CampoTexto>
 
         <CampoTexto
-          ref={refs.telefono}
+          ref={refTelefono}
           etiqueta="Celular"
           icono="call"
           prefijo="+51"
           valor={formatearTelefono(datos.telefono)}
-          onCambiar={cambiar('telefono')}
-          onSalir={salir('telefono')}
+          onCambiar={(v) => cambiar('telefono', v)}
+          onSalir={() => salir('telefono')}
           placeholder="987 654 321"
           keyboardType="phone-pad"
           autoComplete="tel-national"
@@ -251,7 +260,7 @@ export default function RegistroPantalla() {
           maxLength={11}
           returnKeyType="next"
           submitBehavior="submit"
-          onSubmitEditing={() => refs.clave.current?.focus()}
+          onSubmitEditing={() => enfocar('clave')}
           ayuda={
             disponible.telefono === 'revisando'
               ? 'Revisando…'
@@ -262,13 +271,13 @@ export default function RegistroPantalla() {
         />
 
         <CampoTexto
-          ref={refs.clave}
+          ref={refClave}
           etiqueta="Clave"
           icono="lock"
           clave
           valor={datos.clave}
-          onCambiar={cambiar('clave')}
-          onSalir={salir('clave')}
+          onCambiar={(v) => cambiar('clave', v)}
+          onSalir={() => salir('clave')}
           placeholder="Crea una clave segura"
           autoComplete="new-password"
           textContentType="newPassword"
@@ -277,7 +286,7 @@ export default function RegistroPantalla() {
           maxLength={LIMITES.claveMax}
           returnKeyType="next"
           submitBehavior="submit"
-          onSubmitEditing={() => refs.confirmacion.current?.focus()}
+          onSubmitEditing={() => enfocar('confirmacion')}
           error={errorVisible('clave')}
           exito={correcto('clave')}
         >
@@ -285,13 +294,13 @@ export default function RegistroPantalla() {
         </CampoTexto>
 
         <CampoTexto
-          ref={refs.confirmacion}
+          ref={refConfirmacion}
           etiqueta="Confirma tu clave"
           icono="lock"
           clave
           valor={datos.confirmacion}
-          onCambiar={cambiar('confirmacion')}
-          onSalir={salir('confirmacion')}
+          onCambiar={(v) => cambiar('confirmacion', v)}
+          onSalir={() => salir('confirmacion')}
           placeholder="Repite la clave"
           autoComplete="new-password"
           textContentType="newPassword"
@@ -319,7 +328,15 @@ export default function RegistroPantalla() {
           }}
           error={errorVisible('terminos')}
         >
-          Acepto la <Text style={[styles.negrita, { color: colores.enlace }]}>política de privacidad</Text> y el
+          Acepto la{' '}
+          <Text
+            accessibilityRole="link"
+            onPress={() => void Linking.openURL(URL_PRIVACIDAD)}
+            style={[styles.negrita, styles.subrayado, { color: colores.enlace }]}
+          >
+            política de privacidad
+          </Text>{' '}
+          y el
           tratamiento de mis datos personales según la Ley N.° 29733.
         </CasillaAceptar>
       </View>
@@ -362,6 +379,7 @@ const styles = StyleSheet.create({
   formulario: { gap: ESPACIO.l },
   flex: { flex: 1 },
   negrita: { fontWeight: '700' },
+  subrayado: { textDecorationLine: 'underline' },
   sugerencia: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -10,18 +10,35 @@ import {
 } from '@/nucleo/notificaciones';
 import { useSesion } from '@/nucleo/sesion';
 import { router } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../componentes/Avatar';
 import { CajaAviso } from '../componentes/CajaAviso';
 import { Pantalla } from '../componentes/Pantalla';
 import { Titular } from '../componentes/Titular';
+import { cambiarFotoPerfil } from '../servicios/fotoPerfil';
 
-type Opcion = { icono: NombreIcono; titulo: string; detalle: string; onPress: () => void; chip?: string };
+/** Chip de la fila «Verificar identidad» según el estado (RF36). */
+const CHIP_IDENTIDAD = {
+  NO_ENVIADA: { texto: 'Sin verificar', variante: 'contorno', detalle: 'Así tus vecinos sabrán a quién le abren la puerta.' },
+  PENDIENTE: { texto: 'En revisión', variante: 'neutro', detalle: 'Te avisaremos cuando el equipo la revise.' },
+  VERIFICADA: { texto: 'Verificada', variante: 'exito', detalle: 'Tus vecinos ven la insignia en tu perfil.' },
+  RECHAZADA: { texto: 'Rechazada', variante: 'contorno', detalle: 'Revisa el motivo y envíala de nuevo.' },
+} as const;
+
+type Opcion = {
+  icono: NombreIcono;
+  titulo: string;
+  detalle: string;
+  onPress: () => void;
+  chip?: string;
+  varianteChip?: 'contorno' | 'exito' | 'neutro' | 'marca';
+};
 
 /**
  * @description Fila de la sección «Mi cuenta», con ícono, texto y flecha.
  */
-function FilaOpcion({ icono, titulo, detalle, onPress, chip }: Opcion) {
+function FilaOpcion({ icono, titulo, detalle, onPress, chip, varianteChip = 'contorno' }: Opcion) {
   const { colores } = useTema();
 
   return (
@@ -37,7 +54,7 @@ function FilaOpcion({ icono, titulo, detalle, onPress, chip }: Opcion) {
           <Text style={[TIPO.pequeno, { color: colores.textoSecundario }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
             {detalle}
           </Text>
-          {chip ? <Chip texto={chip} variante="contorno" /> : null}
+          {chip ? <Chip texto={chip} variante={varianteChip} /> : null}
         </View>
         <Icono nombre="chevron_right" color={colores.textoSecundario} tamano={24} />
       </View>
@@ -72,13 +89,30 @@ function Contador({ valor, etiqueta }: { valor: string; etiqueta: string }) {
  */
 export default function PerfilPantalla() {
   const { colores } = useTema();
-  const { perfil, modoDesarrollo, salir } = useSesion();
+  const { perfil, modoDesarrollo, salir, recargarPerfil } = useSesion();
 
   const nombre = perfil?.nombre ?? 'Vecino';
   const detalle = [perfil?.barrio, perfil?.telefono].filter(Boolean).join(' · ') || perfil?.correo || '';
   const oficios = perfil?.oficios ?? [];
 
   const permiso = usePermisoNotificaciones();
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const identidad = CHIP_IDENTIDAD[perfil?.estadoIdentidad ?? 'NO_ENVIADA'];
+
+  const cambiarFoto = async () => {
+    if (modoDesarrollo) {
+      Alert.alert('Foto de perfil', 'En modo desarrollo sin la API no se puede subir la foto.');
+      return;
+    }
+    setSubiendoFoto(true);
+    try {
+      if (await cambiarFotoPerfil()) await recargarPerfil();
+    } catch (error) {
+      Alert.alert('No se subió tu foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
 
   /** Con permiso: pide a la API una notificación de prueba (o la muestra local en modo desarrollo). */
   const probarNotificaciones = async () => {
@@ -113,11 +147,32 @@ export default function PerfilPantalla() {
       <Titular etiqueta="Mi perfil" titulo="Tu lugar en la comunidad." />
 
       <View style={[styles.tarjetaPerfil, { backgroundColor: colores.primarioSuave }]}>
-        <Avatar nombre={nombre} tamano={64} solido />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={perfil?.fotoUrl ? 'Cambiar foto de perfil' : 'Agregar foto de perfil'}
+          onPress={() => void cambiarFoto()}
+          disabled={subiendoFoto}
+        >
+          <Avatar nombre={nombre} fotoUrl={perfil?.fotoUrl} tamano={64} solido />
+          <View style={[styles.camara, { backgroundColor: colores.primario, borderColor: colores.primarioSuave }]}>
+            {subiendoFoto ? (
+              <ActivityIndicator size="small" color={colores.sobrePrimario} />
+            ) : (
+              <Icono nombre="photo_camera" color={colores.sobrePrimario} tamano={14} />
+            )}
+          </View>
+        </Pressable>
         <View style={styles.textosPerfil}>
-          <Text style={[TIPO.seccion, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
-            {nombre}
-          </Text>
+          <View style={styles.filaNombre}>
+            <Text style={[TIPO.seccion, styles.nombre, { color: colores.texto }]} numberOfLines={1} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+              {nombre}
+            </Text>
+            {perfil?.estadoIdentidad === 'VERIFICADA' ? (
+              <View accessible accessibilityLabel="Identidad verificada">
+                <Icono nombre="verified" color={colores.exito} tamano={20} />
+              </View>
+            ) : null}
+          </View>
           <Text style={[TIPO.pequeno, { color: colores.textoSecundario }]} numberOfLines={1} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
             {detalle}
           </Text>
@@ -166,10 +221,19 @@ export default function PerfilPantalla() {
         <FilaOpcion
           icono="verified_user"
           titulo="Verificar identidad"
-          detalle="Así tus vecinos sabrán a quién le abren la puerta."
-          chip="Sin verificar"
+          detalle={identidad.detalle}
+          chip={identidad.texto}
+          varianteChip={identidad.variante}
           onPress={() => router.push('/verificar-identidad')}
         />
+        {perfil?.validador ? (
+          <FilaOpcion
+            icono="fact_check"
+            titulo="Validar identidades"
+            detalle="Equipo validador: revisa las solicitudes pendientes."
+            onPress={() => router.push('/validar-identidades')}
+          />
+        ) : null}
         <FilaOpcion
           icono="notifications"
           titulo="Notificaciones"
@@ -181,7 +245,7 @@ export default function PerfilPantalla() {
           icono="help"
           titulo="Guía de ayuda"
           detalle="Aprende a pedir y ofrecer ayuda, paso a paso."
-          onPress={() => Alert.alert('Guía de ayuda', 'Disponible pronto (tarea A8).')}
+          onPress={() => router.push('/guia')}
         />
       </View>
 
@@ -204,6 +268,19 @@ export default function PerfilPantalla() {
 const styles = StyleSheet.create({
   tarjetaPerfil: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.l, padding: ESPACIO.l, borderRadius: RADIO.tarjeta },
   textosPerfil: { flex: 1, gap: ESPACIO.xs },
+  filaNombre: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.xs },
+  nombre: { flexShrink: 1 },
+  camara: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   seccion: { gap: ESPACIO.m },
   contadores: { flexDirection: 'row', gap: ESPACIO.s },
   contador: {

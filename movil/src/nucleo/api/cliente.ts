@@ -23,6 +23,16 @@ export function fijarToken(nuevo: string | null): void {
   token = nuevo;
 }
 
+/** Cabecera de sesión para cargar recursos privados con <Image source={{ uri, headers }} />. */
+export function cabecerasSesion(): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** URL completa de un recurso de la API a partir de su ruta, p. ej. «/avatares/u00?v=1». */
+export function urlApi(ruta: string): string {
+  return /^https?:\/\//.test(ruta) ? ruta : `${URL_API}${ruta}`;
+}
+
 export class ErrorApi extends Error {
   constructor(
     readonly estado: number,
@@ -34,7 +44,7 @@ export class ErrorApi extends Error {
 }
 
 interface Opciones {
-  metodo?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  metodo?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   cuerpo?: unknown;
   /** Id único de la acción (bandeja de salida): la API ignora repeticiones con el mismo id (RN-20). */
   idAccion?: string;
