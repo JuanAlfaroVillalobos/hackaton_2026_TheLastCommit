@@ -1,7 +1,7 @@
 import { ESPACIO, MAX_ESCALA_FUENTE, TIPO, useTema } from '@/compartido/tema';
 import { Boton } from '@/compartido/ui';
 import { useSesion } from '@/nucleo/sesion';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { CajaAviso } from '../componentes/CajaAviso';
@@ -11,23 +11,24 @@ import { Separador } from '../componentes/Separador';
 import { Titular } from '../componentes/Titular';
 
 /**
- * @description Avisa que la acción se conecta a Firebase Auth en la tarea A2.
+ * @description Google y el enlace por correo necesitan Firebase Auth, apagado mientras usamos la API simulada.
  */
 function pendiente(accion: string) {
-  Alert.alert(accion, 'Disponible pronto (tarea A2).');
+  Alert.alert(accion, 'Esta opción se activa cuando conectemos Firebase. Por ahora entra con tu correo y tu clave.');
 }
 
 /**
- * @description Inicio de sesión (P01, RF02, RF04, RF07). Por ahora es visual; en desarrollo permite entrar sin cuenta.
+ * @description Inicio de sesión (P01, RF02, RF04, RF07) contra la API simulada; en desarrollo permite entrar sin cuenta.
  */
 export default function IngresarPantalla() {
   const { colores } = useTema();
   const { entrarModoDesarrollo, ingresar } = useSesion();
-  const [correo, setCorreo] = useState('');
+  const params = useLocalSearchParams<{ correo?: string }>();
+  const [correo, setCorreo] = useState(params.correo ?? '');
   const [clave, setClave] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  // Hoy contra la API simulada (cuenta de prueba: ana@vecinos.pe / vecinos123); en A2, Firebase Auth.
+  // Cuenta de prueba de la API simulada: ana@vecinos.pe / vecinos123.
   const enviar = async () => {
     if (!correo.trim() || !clave) {
       Alert.alert('Ingresar', 'Escribe tu correo y tu clave.');
@@ -69,7 +70,7 @@ export default function IngresarPantalla() {
           autoCapitalize="none"
         />
         <View style={styles.olvido}>
-          <Boton texto="¿Olvidaste tu clave?" variante="enlace" onPress={() => pendiente('Recuperar clave')} />
+          <Boton texto="¿Olvidaste tu clave?" variante="enlace" onPress={() => router.push({ pathname: '/recuperar-clave', params: { correo: correo.trim() } })} />
         </View>
         <Boton texto={enviando ? 'Ingresando…' : 'Ingresar'} icono="login" deshabilitado={enviando} onPress={enviar} />
       </View>

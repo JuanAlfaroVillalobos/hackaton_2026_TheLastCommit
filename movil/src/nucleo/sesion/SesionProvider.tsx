@@ -19,6 +19,13 @@ interface EstadoSesion {
   modoDesarrollo: boolean;
   ingresar: (correo: string, clave: string) => Promise<void>;
   registrar: (datos: DatosRegistro) => Promise<void>;
+  /** true justo después de crear la cuenta: la navegación abre «Completar perfil» una vez (RF05). */
+  recienRegistrado: boolean;
+  olvidarRegistro: () => void;
+  /** RF07: pide el código de 6 dígitos. Devuelve el código solo en la demo (la API simulada no envía correos). */
+  pedirCodigoClave: (correo: string) => Promise<string | undefined>;
+  /** RF07: cambia la clave con el código y deja la sesión abierta. */
+  restablecerClave: (correo: string, codigo: string, clave: string) => Promise<void>;
   salir: () => Promise<void>;
   recargarPerfil: () => Promise<void>;
   actualizarPerfil: (cambios: CambiosPerfil) => Promise<void>;
@@ -91,6 +98,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<PerfilVecino | null>(null);
   const [cargando, setCargando] = useState(true);
   const [modoDesarrollo, setModoDesarrollo] = useState(false);
+  const [recienRegistrado, setRecienRegistrado] = useState(false);
 
   // Restaura la sesión guardada; si la API no responde o el token ya no vale, se entra sin sesión.
   useEffect(() => {
@@ -135,10 +143,32 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   );
 
   const registrar = useCallback(
-    async ({ nombre, correo, telefono, clave }: DatosRegistro) => {
+    async ({ nombre, correo, telefono, clave, aceptaTerminos }: DatosRegistro) => {
       const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/registro', {
         metodo: 'POST',
-        cuerpo: { nombre: nombre.trim(), correo: correo.trim().toLowerCase(), telefono: `+51${telefono}`, clave },
+        cuerpo: { nombre: nombre.trim(), correo: correo.trim().toLowerCase(), telefono: `+51${telefono}`, clave, aceptaTerminos },
+      });
+      setRecienRegistrado(true);
+      await abrir(token, usuario);
+    },
+    [abrir],
+  );
+
+  const olvidarRegistro = useCallback(() => setRecienRegistrado(false), []);
+
+  const pedirCodigoClave = useCallback(async (correo: string) => {
+    const { codigoDemo } = await api<{ mensaje: string; codigoDemo?: string }>('/auth/recuperar', {
+      metodo: 'POST',
+      cuerpo: { correo: correo.trim().toLowerCase() },
+    });
+    return codigoDemo;
+  }, []);
+
+  const restablecerClave = useCallback(
+    async (correo: string, codigo: string, clave: string) => {
+      const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/restablecer', {
+        metodo: 'POST',
+        cuerpo: { correo: correo.trim().toLowerCase(), codigo: codigo.trim(), clave },
       });
       await abrir(token, usuario);
     },
@@ -207,6 +237,10 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       autenticado: perfil !== null,
       ingresar,
       registrar,
+      recienRegistrado,
+      olvidarRegistro,
+      pedirCodigoClave,
+      restablecerClave,
       salir,
       recargarPerfil,
       actualizarPerfil,
@@ -220,6 +254,10 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       modoDesarrollo,
       ingresar,
       registrar,
+      recienRegistrado,
+      olvidarRegistro,
+      pedirCodigoClave,
+      restablecerClave,
       salir,
       recargarPerfil,
       actualizarPerfil,

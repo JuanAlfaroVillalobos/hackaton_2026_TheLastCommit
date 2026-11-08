@@ -1,9 +1,22 @@
 // Ruta: src/nucleo/bandeja-salida/index.ts
-// Bandeja de salida (RF41).
-// ADAPTADOR TEMPORAL: solo expone el número de acciones pendientes, desde simulaciones/.
-// Persona A implementa enviarAccion() (internet → SMS → cola) y este hook pasa a leer la cola real.
-import { pendientesBandejaMock } from "@/simulaciones";
-
-export function usePendientesBandeja(): number {
-  return pendientesBandejaMock;
-}
+// Bandeja de salida (RF41, RN-20). Uso desde el servicio de un módulo:
+//   const r = await enviarAccion({ tipo: 'favores.aceptar', ruta: `/favores/${id}/aceptar`, descripcion: 'Aceptar la necesidad de Rosa' });
+//   if (r.estado === 'enviada') usar r.datos; si no, mostrar «Se enviará cuando vuelva la señal».
+export {
+  alResolverAccion,
+  descartarAccion,
+  enviarAccion,
+  registrarTransporteSms,
+  sincronizarBandeja,
+} from './bandeja';
+export { ProveedorBandeja } from './ProveedorBandeja';
+export type {
+  AccionGuardada,
+  AlResolver,
+  EstadoAccion,
+  MetodoAccion,
+  ResultadoAccion,
+  SolicitudAccion,
+  TransporteSms,
+} from './tipos';
+export { useBandeja, usePendientesBandeja } from './useBandeja';

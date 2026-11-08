@@ -47,6 +47,8 @@ export interface DatosRegistro {
   /** 9 dígitos que empiezan en 9; la app agrega «+51». */
   telefono: string;
   clave: string;
+  /** Consentimiento de la política de privacidad (Ley 29733); la API lo exige. */
+  aceptaTerminos: boolean;
 }
 
 export type CambiosPerfil = Partial<Pick<PerfilVecino, 'nombre' | 'barrio' | 'oficios' | 'telefono'>>;

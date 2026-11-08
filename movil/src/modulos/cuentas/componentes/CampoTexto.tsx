@@ -1,7 +1,7 @@
 import { ESPACIO, MAX_ESCALA_FUENTE, RADIO, TACTIL_MIN, TIPO, useTema } from '@/compartido/tema';
 import { Icono, type NombreIcono } from '@/compartido/ui';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { useState, type ReactNode, type Ref } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputInstance, type TextInputProps } from 'react-native';
 
 type Props = {
   etiqueta: string;
@@ -12,38 +12,86 @@ type Props = {
   prefijo?: string;
   ayuda?: string;
   error?: string;
+  /** Campo revisado y correcto: borde verde y ✓. Con texto, lo muestra debajo. */
+  exito?: boolean | string;
   clave?: boolean;
-} & Pick<TextInputProps, 'placeholder' | 'keyboardType' | 'autoComplete' | 'autoCapitalize' | 'maxLength' | 'textContentType'>;
+  /** Al salir del campo (para validar y normalizar). */
+  onSalir?: () => void;
+  /** Contenido extra debajo del campo (sugerencias, medidor de clave). */
+  children?: ReactNode;
+  ref?: Ref<TextInputInstance>;
+} & Pick<
+  TextInputProps,
+  | 'placeholder'
+  | 'keyboardType'
+  | 'autoComplete'
+  | 'autoCapitalize'
+  | 'autoCorrect'
+  | 'maxLength'
+  | 'textContentType'
+  | 'returnKeyType'
+  | 'onSubmitEditing'
+  | 'submitBehavior'
+  | 'importantForAutofill'
+>;
 
 /**
- * @description Campo de texto con etiqueta, ícono, ayuda y error, siguiendo los formularios del diseño del equipo.
+ * @description Campo de texto con etiqueta, ícono, ayuda, error y estado correcto, siguiendo los formularios del diseño del equipo.
  */
-export function CampoTexto({ etiqueta, valor, onCambiar, icono, prefijo, ayuda, error, clave = false, ...resto }: Props) {
+export function CampoTexto({
+  etiqueta,
+  valor,
+  onCambiar,
+  icono,
+  prefijo,
+  ayuda,
+  error,
+  exito,
+  clave = false,
+  onSalir,
+  children,
+  ref,
+  ...resto
+}: Props) {
   const { colores } = useTema();
   const [enfocado, setEnfocado] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  const colorBorde = error ? colores.sos : enfocado ? colores.primario : colores.borde;
+  const correcto = !error && Boolean(exito);
+  const colorBorde = error ? colores.sos : enfocado ? colores.primario : correcto ? colores.exito : colores.borde;
+  const mensajeExito = typeof exito === 'string' ? exito : undefined;
 
   return (
     <View style={styles.raiz}>
       <Text style={[styles.etiqueta, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
         {etiqueta}
       </Text>
-      <View style={[styles.caja, { backgroundColor: colores.superficie, borderColor: colorBorde }]}>
-        {icono ? <Icono nombre={icono} color={colores.textoSecundario} tamano={22} /> : null}
+      <View
+        style={[
+          styles.caja,
+          { backgroundColor: error ? colores.sosFondo : colores.superficie, borderColor: colorBorde },
+          enfocado || error ? styles.cajaResaltada : null,
+        ]}
+      >
+        {icono ? <Icono nombre={icono} color={error ? colores.sos : colores.textoSecundario} tamano={22} /> : null}
         {prefijo ? (
           <Text style={[styles.prefijo, { color: colores.texto }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
             {prefijo}
           </Text>
         ) : null}
         <TextInput
+          ref={ref}
           accessibilityLabel={etiqueta}
-          accessibilityHint={error ?? ayuda}
+          accessibilityHint={error ?? mensajeExito ?? ayuda}
+          accessibilityState={{ selected: enfocado }}
+          aria-invalid={Boolean(error)}
           value={valor}
           onChangeText={onCambiar}
           onFocus={() => setEnfocado(true)}
-          onBlur={() => setEnfocado(false)}
+          onBlur={() => {
+            setEnfocado(false);
+            onSalir?.();
+          }}
           secureTextEntry={clave && !visible}
           placeholderTextColor={colores.textoSecundario}
           selectionColor={colores.primario}
@@ -51,6 +99,8 @@ export function CampoTexto({ etiqueta, valor, onCambiar, icono, prefijo, ayuda, 
           maxFontSizeMultiplier={MAX_ESCALA_FUENTE}
           {...resto}
         />
+        {correcto && !clave ? <Icono nombre="check_circle" color={colores.exito} tamano={22} /> : null}
+        {error && !clave ? <Icono nombre="error" color={colores.sos} tamano={22} /> : null}
         {clave ? (
           <Pressable
             accessibilityRole="button"
@@ -62,14 +112,28 @@ export function CampoTexto({ etiqueta, valor, onCambiar, icono, prefijo, ayuda, 
           </Pressable>
         ) : null}
       </View>
-      {error || ayuda ? (
-        <Text
-          style={[styles.ayuda, { color: error ? colores.sos : colores.textoSecundario }]}
-          maxFontSizeMultiplier={MAX_ESCALA_FUENTE}
-        >
-          {error ?? ayuda}
+
+      {error ? (
+        <View style={styles.mensaje} accessibilityLiveRegion="polite">
+          <Icono nombre="error" color={colores.sos} tamano={16} />
+          <Text style={[styles.textoMensaje, { color: colores.sos }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+            {error}
+          </Text>
+        </View>
+      ) : mensajeExito ? (
+        <View style={styles.mensaje}>
+          <Icono nombre="check_circle" color={colores.exito} tamano={16} />
+          <Text style={[styles.textoMensaje, { color: colores.exito }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+            {mensajeExito}
+          </Text>
+        </View>
+      ) : ayuda ? (
+        <Text style={[styles.textoMensaje, { color: colores.textoSecundario }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
+          {ayuda}
         </Text>
       ) : null}
+
+      {children}
     </View>
   );
 }
@@ -86,7 +150,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: ESPACIO.s,
   },
+  cajaResaltada: { borderWidth: 2 },
   prefijo: TIPO.cuerpoFuerte,
   entrada: { ...TIPO.cuerpo, flex: 1, paddingVertical: ESPACIO.m },
-  ayuda: TIPO.pequeno,
+  mensaje: { flexDirection: 'row', alignItems: 'flex-start', gap: ESPACIO.xs },
+  textoMensaje: { ...TIPO.pequeno, flex: 1 },
 });

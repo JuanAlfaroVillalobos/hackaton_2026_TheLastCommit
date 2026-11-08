@@ -1,2 +1,3 @@
 // Ruta: src/nucleo/red/index.ts
-export { useConexion } from "./useConexion";
+export { alVolverLaRed, estaEnLinea } from './conexion';
+export { useConexion } from './useConexion';

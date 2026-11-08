@@ -36,13 +36,15 @@ export class ErrorApi extends Error {
 interface Opciones {
   metodo?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   cuerpo?: unknown;
+  /** Id único de la acción (bandeja de salida): la API ignora repeticiones con el mismo id (RN-20). */
+  idAccion?: string;
 }
 
 /**
  * @description Llama a la API y devuelve el JSON. Lanza ErrorApi con el mensaje del servidor (o
  * `SIN_CONEXION` si la API no responde) para que la pantalla lo muestre tal cual.
  */
-export async function api<T>(ruta: string, { metodo = 'GET', cuerpo }: Opciones = {}): Promise<T> {
+export async function api<T>(ruta: string, { metodo = 'GET', cuerpo, idAccion }: Opciones = {}): Promise<T> {
   let respuesta: Response;
   try {
     respuesta = await fetch(`${URL_API}${ruta}`, {
@@ -51,6 +53,7 @@ export async function api<T>(ruta: string, { metodo = 'GET', cuerpo }: Opciones 
         Accept: 'application/json',
         ...(cuerpo !== undefined && { 'Content-Type': 'application/json' }),
         ...(token && { Authorization: `Bearer ${token}` }),
+        ...(idAccion && { 'X-Id-Accion': idAccion }),
       },
       body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
     });
