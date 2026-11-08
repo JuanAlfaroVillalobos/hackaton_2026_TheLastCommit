@@ -6,7 +6,7 @@
 //   - RF23 + RF25: tareaEmergencia() (cada minuto) reenvía «¿Estás bien?» y cierra la emergencia.
 // Cuando haya Cloud Functions, procesarAlerta() pasa a un trigger de `alertas` y tareaEmergencia() a
 // `cadaMinuto`; las rutas solo llaman a estas funciones.
-import { gridDisk } from 'h3-js';
+import { cellToLatLng, gridDisk } from 'h3-js';
 import { almacen, vecinosDeEmergencia } from '../../datos/almacen.js';
 import type { AlertaEmergencia, Emergencia, Usuario, VecinoEnEmergencia } from '../../datos/tipos.js';
 import { conflicto } from '../../nucleo/errores.js';
@@ -104,11 +104,13 @@ function nuevoVecino(
 
 async function activar(celdaCentro: string, ahora: number): Promise<Emergencia> {
   const celdas = gridDisk(celdaCentro, 1);
+  const [lat, lng] = cellToLatLng(celdaCentro);
   // Atómico: si dos alertas cruzan el umbral a la vez, solo una crea la emergencia.
   const { fila: emergencia, creada } = await almacen.emergencias.crearSiNoExiste(
     {
       id: nuevoId('em'),
       celdaCentro,
+      centro: { lat, lng },
       celdas,
       estado: 'ACTIVA',
       activadaEn: ahora,

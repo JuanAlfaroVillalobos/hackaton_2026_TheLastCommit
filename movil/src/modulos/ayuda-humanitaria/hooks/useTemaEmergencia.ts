@@ -1,6 +1,7 @@
 // Ruta: src/modulos/ayuda-humanitaria/hooks/useTemaEmergencia.ts
 // Pone el tema rojo mientras se está dentro de /emergencia y devuelve el tema anterior al salir.
 import { useTemaStore } from "@/compartido/tema";
+import { hayEmergenciaActiva } from "@/modulos/emergencia";
 import { useEffect } from "react";
 
 type NombreTema = ReturnType<typeof useTemaStore.getState>["nombre"];
@@ -14,6 +15,8 @@ export function useTemaEmergencia(): void {
     if (nombre !== "emergencia") previo = nombre;
     setTema("emergencia");
     return () => {
+      // Si la zona sigue en emergencia, el rojo se queda (lo quita el módulo emergencia al terminar).
+      if (hayEmergenciaActiva()) return;
       const { temaClima } = useTemaStore.getState();
       useTemaStore.getState().setTema(temaClima ?? previo ?? "normal");
       previo = null;

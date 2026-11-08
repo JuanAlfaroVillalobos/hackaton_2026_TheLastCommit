@@ -216,6 +216,8 @@ export interface ConteoCelda {
 export interface Emergencia {
   id: string;
   celdaCentro: string;
+  /** Centro de celdaCentro, para centrar el mapa de P11. */
+  centro: Coordenada;
   /** celdaCentro + sus 6 vecinas (k = 1). */
   celdas: string[];
   estado: 'ACTIVA' | 'FINALIZADA';
