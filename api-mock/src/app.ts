@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { manejarErrores, rutaNoEncontrada } from './nucleo/errores.js';
 import { idempotencia } from './nucleo/idempotencia.js';
+import { panelDev } from './nucleo/panelDev.js';
 import { rutasAuth } from './modulos/auth/rutas.js';
 import { rutasAyudaHumanitaria } from './modulos/ayuda-humanitaria/rutas.js';
 import { rutasDirectorio } from './modulos/directorio/rutas.js';
@@ -26,6 +27,9 @@ export function crearApp() {
   app.get('/salud', (_req, res) => {
     res.json({ ok: true, servicio: 'vecinos-api-mock', hora: Date.now() });
   });
+
+  // Panel para ver los datos en memoria desde el navegador (solo en desarrollo).
+  if (process.env.NODE_ENV !== 'production') app.use('/dev', panelDev);
 
   const v1 = express.Router();
   v1.use('/auth', rutasAuth);

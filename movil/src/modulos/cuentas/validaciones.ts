@@ -113,7 +113,7 @@ export function errorTelefono(digitos: string): string | undefined {
   if (digitos[0] !== '9') return 'Los celulares en Perú empiezan con 9.';
   if (digitos.length < 9) {
     const faltan = 9 - digitos.length;
-    return `Faltan ${faltan} ${faltan === 1 ? 'dígito' : 'dígitos'}.`;
+    return faltan === 1 ? 'Falta 1 dígito.' : `Faltan ${faltan} dígitos.`;
   }
   if (digitos.length > 9) return 'El celular tiene 9 dígitos.';
   if (/^9(\d)\1{7}$/.test(digitos)) return 'Ese número no parece real. Escribe tu celular.';

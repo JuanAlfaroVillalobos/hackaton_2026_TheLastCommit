@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { almacen } from '../../datos/almacen.js';
 import { ZONA_DEMO } from '../../datos/semillas.js';
 import type { Usuario } from '../../datos/tipos.js';
-import { abrirSesion, cerrarSesion, leerToken, requiereSesion } from '../../nucleo/autenticacion.js';
+import { abrirSesion, cerrarSesion, cerrarSesionesDe, leerToken, requiereSesion } from '../../nucleo/autenticacion.js';
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
 import { randomInt } from 'node:crypto';
 import { nuevoId, texto } from '../../nucleo/utilidades.js';
@@ -68,15 +68,54 @@ rutasAuth.post('/disponibilidad', async (req, res) => {
   res.json(respuesta);
 });
 
+// ---------- Bloqueo por intentos fallidos ----------
+// 5 claves incorrectas seguidas bloquean el correo 15 minutos (protege contra adivinar claves).
+
+const MAX_FALLOS = 5;
+const BLOQUEO_MS = 15 * 60 * 1000;
+const intentos = new Map<string, { fallos: number; bloqueadoHasta: number }>();
+
+function exigirSinBloqueo(correo: string): void {
+  const r = intentos.get(correo);
+  if (r && r.bloqueadoHasta > Date.now()) {
+    const minutos = Math.ceil((r.bloqueadoHasta - Date.now()) / 60_000);
+    throw new ErrorHttp(
+      429,
+      'DEMASIADOS_INTENTOS',
+      `Demasiados intentos. Espera ${minutos} ${minutos === 1 ? 'minuto' : 'minutos'} o recupera tu clave.`,
+    );
+  }
+}
+
+/** Suma un fallo y devuelve cuántos intentos quedan antes del bloqueo. */
+function registrarFallo(correo: string): number {
+  const fallos = (intentos.get(correo)?.fallos ?? 0) + 1;
+  if (fallos >= MAX_FALLOS) {
+    intentos.set(correo, { fallos: 0, bloqueadoHasta: Date.now() + BLOQUEO_MS });
+    return 0;
+  }
+  intentos.set(correo, { fallos, bloqueadoHasta: 0 });
+  return MAX_FALLOS - fallos;
+}
+
 rutasAuth.post('/ingresar', async (req, res) => {
   const correo = texto(req.body?.correo)?.toLowerCase();
   const clave = texto(req.body?.clave);
   if (!correo || !clave) throw datosInvalidos('Envía correo y clave.');
 
+  exigirSinBloqueo(correo);
   const [usuario] = await almacen.usuarios.listar({ correo });
   if (!usuario || usuario.clave !== clave) {
-    throw new ErrorHttp(401, 'CREDENCIALES_INVALIDAS', 'Correo o clave incorrectos.');
+    const quedan = registrarFallo(correo);
+    throw new ErrorHttp(
+      401,
+      'CREDENCIALES_INVALIDAS',
+      quedan > 0 && quedan <= 2
+        ? `Correo o clave incorrectos. Te ${quedan === 1 ? 'queda 1 intento' : `quedan ${quedan} intentos`} antes de un bloqueo de 15 minutos.`
+        : 'Correo o clave incorrectos.',
+    );
   }
+  intentos.delete(correo);
   res.json({ token: abrirSesion(usuario.id), usuario: aPublico(usuario) });
 });
 
@@ -137,5 +176,26 @@ rutasAuth.post('/restablecer', async (req, res) => {
   validarClave(clave, { nombre: usuario.nombre, correo, telefono: usuario.telefono ?? undefined });
   await almacen.usuarios.actualizar(usuario.id, { clave });
   codigos.delete(correo);
+  intentos.delete(correo);
+  // La clave cambió: se cierran las sesiones abiertas en otros teléfonos.
+  cerrarSesionesDe(usuario.id);
   res.json({ token: abrirSesion(usuario.id), usuario: aPublico({ ...usuario, clave }) });
+});
+
+// ---------- Cambiar clave con sesión iniciada ----------
+
+rutasAuth.post('/cambiar-clave', requiereSesion, async (req, res) => {
+  const uid: string = res.locals.uid;
+  const actual = typeof req.body?.actual === 'string' ? req.body.actual : '';
+  const nueva = typeof req.body?.nueva === 'string' ? req.body.nueva : '';
+  const usuario = await almacen.usuarios.obtener(uid);
+  if (!usuario) throw noEncontrado('El usuario');
+  if (!actual || usuario.clave !== actual) throw new ErrorHttp(400, 'CLAVE_ACTUAL_INCORRECTA', 'Tu clave actual no es correcta.');
+  if (nueva === actual) throw datosInvalidos('La clave nueva debe ser distinta de la actual.');
+  validarClave(nueva, { nombre: usuario.nombre, correo: usuario.correo, telefono: usuario.telefono ?? undefined });
+
+  await almacen.usuarios.actualizar(uid, { clave: nueva });
+  // Sigue abierta la sesión de este teléfono; las demás se cierran.
+  cerrarSesionesDe(uid, leerToken(req.headers.authorization));
+  res.status(204).end();
 });
