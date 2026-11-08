@@ -3,11 +3,12 @@
 import { Router } from 'express';
 import { almacen } from '../../datos/almacen.js';
 import type { Usuario } from '../../datos/tipos.js';
-import { requiereSesion } from '../../nucleo/autenticacion.js';
-import { datosInvalidos, noEncontrado } from '../../nucleo/errores.js';
+import { cerrarSesionesDe, requiereSesion } from '../../nucleo/autenticacion.js';
+import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
 import { leerBuzon, notificar } from '../../nucleo/notificar.js';
 import { numero, texto } from '../../nucleo/utilidades.js';
 import { aPublico } from '../auth/rutas.js';
+import { borrarFotosIdentidad } from '../identidad/rutas.js';
 import { exigirTelefonoLibre, normalizarTelefono, validarNombre, validarOficios } from '../auth/validaciones.js';
 
 export const rutasVecinos = Router();
@@ -37,8 +38,9 @@ rutasVecinos.patch('/yo', async (req, res) => {
     cambios.nombre = validarNombre(req.body.nombre);
   }
   if (req.body?.barrio !== undefined) {
-    const barrio = texto(req.body.barrio);
-    if (barrio) cambios.barrio = barrio;
+    const barrio = texto(req.body.barrio)?.replace(/\s+/g, ' ');
+    if (!barrio || barrio.length < 3 || barrio.length > 60) throw datosInvalidos('El barrio debe tener de 3 a 60 caracteres.');
+    cambios.barrio = barrio;
   }
   if (req.body?.telefono !== undefined) {
     const telefono = normalizarTelefono(req.body.telefono);
@@ -155,4 +157,26 @@ rutasVecinos.delete('/yo/foto', async (_req, res) => {
   const usuario = await almacen.usuarios.actualizar(uid, { fotoUrl: null });
   if (!usuario) throw noEncontrado('El usuario');
   res.json(aPublico(usuario));
+});
+
+// ---------- Eliminar cuenta (derecho de cancelación, Ley 29733) ----------
+
+/** Pide la clave y la palabra ELIMINAR. Borra el perfil, la foto, el DNI y las sesiones. */
+rutasVecinos.post('/yo/eliminar', async (req, res) => {
+  const uid: string = res.locals.uid;
+  const usuario = await almacen.usuarios.obtener(uid);
+  if (!usuario) throw noEncontrado('El usuario');
+  if (req.body?.confirmacion !== 'ELIMINAR') throw datosInvalidos('Escribe ELIMINAR para confirmar.');
+  if (typeof req.body?.clave !== 'string' || req.body.clave !== usuario.clave) {
+    throw new ErrorHttp(400, 'CLAVE_INCORRECTA', 'La clave no es correcta.');
+  }
+  if (usuario.necesidadActivaId) {
+    throw conflicto('Tienes un pedido de ayuda activo. Ciérralo o cancélalo antes de eliminar tu cuenta.');
+  }
+
+  avatares.delete(uid);
+  borrarFotosIdentidad(uid);
+  await almacen.usuarios.eliminar(uid);
+  cerrarSesionesDe(uid);
+  res.status(204).end();
 });

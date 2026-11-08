@@ -18,6 +18,12 @@ const MAX_FOTO_BYTES = 2 * 1024 * 1024;
 const LETRAS = 'A-Za-zÀ-ÖØ-öø-ÿ';
 const NOMBRES = new RegExp(`^[${LETRAS}]+(?:['-][${LETRAS}]+)*(?: [${LETRAS}]+(?:['-][${LETRAS}]+)*)*$`);
 
+/** Al eliminar la cuenta: borra el DNI y la selfie guardados. */
+export function borrarFotosIdentidad(uid: string): void {
+  fotos.delete(claveFoto(uid, 'dni'));
+  fotos.delete(claveFoto(uid, 'selfie'));
+}
+
 export const rutasIdentidad = Router();
 rutasIdentidad.use(requiereSesion);
 

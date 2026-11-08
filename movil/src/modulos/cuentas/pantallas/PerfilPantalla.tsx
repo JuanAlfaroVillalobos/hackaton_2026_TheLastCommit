@@ -2,6 +2,7 @@ import { ESPACIO, MAX_ESCALA_FUENTE, RADIO, TIPO, useTema } from '@/compartido/t
 import { Boton, Chip, Icono, Tarjeta, type NombreIcono } from '@/compartido/ui';
 import { OFICIOS } from '@/compartido/constantes/oficios';
 import { api } from '@/nucleo/api';
+import { usePendientesBandeja } from '@/nucleo/bandeja-salida';
 import {
   abrirAjustesNotificaciones,
   mostrarNotificacion,
@@ -96,6 +97,7 @@ export default function PerfilPantalla() {
   const oficios = perfil?.oficios ?? [];
 
   const permiso = usePermisoNotificaciones();
+  const pendientes = usePendientesBandeja();
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const identidad = CHIP_IDENTIDAD[perfil?.estadoIdentidad ?? 'NO_ENVIADA'];
 
@@ -139,7 +141,18 @@ export default function PerfilPantalla() {
   };
 
   const cerrarSesion = () => {
-    salir().catch(() => Alert.alert('Cerrar sesión', 'No se pudo cerrar la sesión. Inténtalo de nuevo.'));
+    const hacerlo = () => salir().catch(() => Alert.alert('Cerrar sesión', 'No se pudo cerrar la sesión. Inténtalo de nuevo.'));
+    if (modoDesarrollo) return void hacerlo();
+    Alert.alert(
+      '¿Cerrar sesión?',
+      pendientes > 0
+        ? `Tienes ${pendientes} ${pendientes === 1 ? 'acción pendiente' : 'acciones pendientes'} sin enviar. Se enviarán cuando vuelvas a entrar con esta cuenta.`
+        : 'Dejarás de recibir avisos de ayuda y emergencias en este teléfono.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cerrar sesión', style: 'destructive', onPress: () => void hacerlo() },
+      ],
+    );
   };
 
   return (
@@ -213,6 +226,12 @@ export default function PerfilPantalla() {
           Mi cuenta
         </Text>
         <FilaOpcion
+          icono="badge"
+          titulo="Mis datos"
+          detalle="Nombre, barrio y celular."
+          onPress={() => router.push('/editar-perfil')}
+        />
+        <FilaOpcion
           icono="edit"
           titulo="Completar perfil"
           detalle="Tus oficios, tu foto y los permisos de la app."
@@ -241,6 +260,22 @@ export default function PerfilPantalla() {
           chip={permiso === 'concedido' ? undefined : 'Desactivadas'}
           onPress={() => void probarNotificaciones()}
         />
+        {pendientes > 0 ? (
+          <FilaOpcion
+            icono="schedule_send"
+            titulo="Acciones pendientes"
+            detalle="Lo que hiciste sin internet y aún no se envía."
+            chip={`${pendientes} sin enviar`}
+            varianteChip="contorno"
+            onPress={() => router.push('/pendientes')}
+          />
+        ) : null}
+        <FilaOpcion
+          icono="lock"
+          titulo="Cambiar clave"
+          detalle="Cierra tu sesión en otros teléfonos."
+          onPress={() => router.push('/cambiar-clave')}
+        />
         <FilaOpcion
           icono="help"
           titulo="Guía de ayuda"
@@ -261,6 +296,10 @@ export default function PerfilPantalla() {
         variante="secundario"
         onPress={cerrarSesion}
       />
+
+      {!modoDesarrollo ? (
+        <Boton texto="Eliminar mi cuenta" variante="enlace" onPress={() => router.push('/eliminar-cuenta')} />
+      ) : null}
     </Pantalla>
   );
 }

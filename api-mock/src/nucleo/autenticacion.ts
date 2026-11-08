@@ -17,6 +17,13 @@ export function cerrarSesion(token: string): void {
   sesiones.delete(token);
 }
 
+/** Cierra todas las sesiones de un usuario (cambio de clave, cuenta eliminada), salvo `excepto`. */
+export function cerrarSesionesDe(uid: string, excepto?: string | null): void {
+  for (const [token, dueno] of sesiones) {
+    if (dueno === uid && token !== excepto) sesiones.delete(token);
+  }
+}
+
 export function leerToken(cabecera: string | undefined): string | null {
   const [tipo, token] = (cabecera ?? '').split(' ');
   return tipo === 'Bearer' && token ? token : null;
