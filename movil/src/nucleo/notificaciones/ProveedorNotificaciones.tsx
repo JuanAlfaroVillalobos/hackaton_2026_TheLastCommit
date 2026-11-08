@@ -2,13 +2,13 @@
 // Con sesión: crea canales, pide permiso, registra el token de FCM, escucha mensajes con la app abierta,
 // abre la ruta de la notificación que inició la app y arranca el sondeo de respaldo.
 import { useSesion } from '@/nucleo/sesion';
-import { getMessaging, onMessage } from '@react-native-firebase/messaging';
 import { router } from 'expo-router';
 import { useEffect, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import notifee, { EventType } from 'react-native-notify-kit';
 import { crearCanales } from './canales';
 import { registrarDispositivo } from './dispositivo';
+import { fcm } from './fcm';
 import { aCarga, alPulsar, despachar } from './manejadores';
 import { pedirPermisoNotificaciones } from './permiso';
 import { iniciarSondeo } from './sondeo';
@@ -47,13 +47,16 @@ export function ProveedorNotificaciones({ children }: { children: ReactNode }) {
           }),
         );
 
+        const m = fcm();
         try {
-          limpiezas.push(
-            onMessage(getMessaging(), async (mensaje) => {
-              const carga = aCarga(mensaje.data);
-              if (carga) await despachar(carga, { enPrimerPlano: true, origen: 'fcm' });
-            }),
-          );
+          if (m) {
+            limpiezas.push(
+              m.onMessage(m.getMessaging(), async (mensaje) => {
+                const carga = aCarga(mensaje.data);
+                if (carga) await despachar(carga, { enPrimerPlano: true, origen: 'fcm' });
+              }),
+            );
+          }
         } catch {
           // sin FCM: queda el sondeo
         }

@@ -13,7 +13,8 @@ export type EstadoPermisoApp = 'concedido' | 'pendiente' | 'bloqueado' | 'revisa
 
 const ANDROID = Platform.OS === 'android';
 const VERSION = ANDROID ? Number(Platform.Version) : 0;
-const PERMISOS_SMS = [PermissionsAndroid.PERMISSIONS.SEND_SMS, PermissionsAndroid.PERMISSIONS.RECEIVE_SMS];
+// En web PermissionsAndroid no existe: leerlo al cargar el archivo rompía la app.
+const PERMISOS_SMS = ANDROID ? [PermissionsAndroid.PERMISSIONS.SEND_SMS, PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] : [];
 
 async function leer(): Promise<Record<IdPermiso, EstadoPermisoApp>> {
   const ubicacion = await Location.getForegroundPermissionsAsync().catch(() => null);

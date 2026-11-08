@@ -1,16 +1,32 @@
 // Ruta: src/nucleo/repositorio.ts
-// Contrato de acceso a datos. Las rutas solo conocen esta interfaz, así que pasar a MongoDB o
-// Firestore es escribir otra clase que la cumpla (p. ej. RepositorioMongo, RepositorioFirestore)
-// y cambiarla en src/datos/almacen.ts. Todos los métodos son async aunque la memoria no lo necesite.
+// Contrato de acceso a datos. Las rutas solo conocen esta interfaz; hay dos implementaciones:
+// RepositorioMemoria (aquí) y RepositorioFirestore (repositorioFirestore.ts). Cuál usa cada colección
+// se decide en src/datos/almacen.ts. Todos los métodos son async aunque la memoria no lo necesite.
+import { conflicto } from './errores.js';
 
 export interface Entidad {
   id: string;
 }
 
+/** Resultado de crearSiNoExiste: la fila nueva o la que ya cumplía la condición. */
+export interface ResultadoCreacion<T> {
+  fila: T;
+  creada: boolean;
+}
+
 export interface Repositorio<T extends Entidad> {
+  /** Filtra por igualdad en cada campo dado. */
   listar(filtro?: Partial<T>): Promise<T[]>;
   obtener(id: string): Promise<T | null>;
+  /** Crea el documento; lanza 409 si el id ya existe. */
   crear(datos: T): Promise<T>;
+  /**
+   * Crea `datos` solo si ninguna fila que cumple `filtro` pasa `vigente`; si alguna lo pasa, la
+   * devuelve sin crear nada. Es atómico: con dos llamadas simultáneas solo una crea (RN-04, RN-12).
+   */
+  crearSiNoExiste(datos: T, filtro: Partial<T>, vigente?: (fila: T) => boolean): Promise<ResultadoCreacion<T>>;
+  /** Crea o reemplaza el documento completo. */
+  guardar(datos: T): Promise<T>;
   actualizar(id: string, cambios: Partial<T>): Promise<T | null>;
   eliminar(id: string): Promise<boolean>;
 }
@@ -23,11 +39,15 @@ export class RepositorioMemoria<T extends Entidad> implements Repositorio<T> {
     for (const fila of semilla) this.filas.set(fila.id, structuredClone(fila));
   }
 
-  async listar(filtro: Partial<T> = {}): Promise<T[]> {
+  private filtrar(filtro: Partial<T>): T[] {
     const condiciones = Object.entries(filtro).filter(([, valor]) => valor !== undefined);
-    return [...this.filas.values()]
-      .filter((fila) => condiciones.every(([campo, valor]) => fila[campo as keyof T] === valor))
-      .map((fila) => structuredClone(fila));
+    return [...this.filas.values()].filter((fila) =>
+      condiciones.every(([campo, valor]) => fila[campo as keyof T] === valor),
+    );
+  }
+
+  async listar(filtro: Partial<T> = {}): Promise<T[]> {
+    return this.filtrar(filtro).map((fila) => structuredClone(fila));
   }
 
   async obtener(id: string): Promise<T | null> {
@@ -36,6 +56,20 @@ export class RepositorioMemoria<T extends Entidad> implements Repositorio<T> {
   }
 
   async crear(datos: T): Promise<T> {
+    if (this.filas.has(datos.id)) throw conflicto(`${datos.id} ya existe.`);
+    return this.guardar(datos);
+  }
+
+  // Sin `await` entre la búsqueda y la escritura: Node no intercala otra petición, así que es atómico.
+  async crearSiNoExiste(datos: T, filtro: Partial<T>, vigente: (fila: T) => boolean = () => true) {
+    const previa = this.filtrar(filtro).find(vigente);
+    if (previa) return { fila: structuredClone(previa), creada: false };
+    if (this.filas.has(datos.id)) throw conflicto(`${datos.id} ya existe.`);
+    this.filas.set(datos.id, structuredClone(datos));
+    return { fila: structuredClone(datos), creada: true };
+  }
+
+  async guardar(datos: T): Promise<T> {
     this.filas.set(datos.id, structuredClone(datos));
     return structuredClone(datos);
   }

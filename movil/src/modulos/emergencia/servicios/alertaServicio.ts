@@ -1,8 +1,9 @@
 // Ruta: src/modulos/emergencia/servicios/alertaServicio.ts
 // RF20: registra la alerta de emergencia.
-// Hoy va a la API simulada (POST /emergencia/alertas). Pendiente: ubicación validada (RF42), función
-// invocable `registrarAlerta` a través de enviarAccion() de la bandeja de salida (RF41) y, sin internet,
-// SMS tipo `E` (RF26). La firma no cambia, así que BotonSos tampoco.
+// Va a la API (POST /emergencia/alertas), que la guarda en `alertas` (Firestore con ALMACEN=firestore)
+// y recalcula el conteo de su celda H3 en `celdas` (RN-11, RN-12). Una pulsación repetida en 10 min
+// devuelve la misma alerta. Pendiente: ubicación validada (RF42), bandeja de salida (RF41) y, sin
+// internet, SMS tipo `E` (RF26). La firma no cambia, así que BotonSos tampoco.
 import { api, ErrorApi } from "@/nucleo/api";
 
 export async function registrarAlerta(ubicacion?: { lat: number; lng: number }): Promise<void> {
