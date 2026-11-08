@@ -1,10 +1,39 @@
-import { ProveedorTema, useTema } from '@/compartido/tema';
+import { ProveedorTema, useTema, useTemaStore } from '@/compartido/tema';
 import { ProveedorBandeja } from '@/nucleo/bandeja-salida';
+import { obtenerClima, temaPorClima } from '@/nucleo/clima';
 import { ProveedorNotificaciones } from '@/nucleo/notificaciones';
 import { SesionProvider, useSesion } from '@/nucleo/sesion';
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+
+const INTERVALO_CLIMA_MS = 30 * 60 * 1000;
+
+function SincronizarTemaClima() {
+  const { cargando, perfil } = useSesion();
+  const lat = perfil?.ubicacion?.lat;
+  const lng = perfil?.ubicacion?.lng;
+
+  useEffect(() => {
+    if (cargando || lat == null || lng == null) return;
+
+    let activo = true;
+    const actualizar = async () => {
+      const clima = await obtenerClima({ lat, lng });
+      if (!activo || !clima) return;
+      useTemaStore.getState().setTemaClima(temaPorClima(clima));
+    };
+
+    void actualizar();
+    const intervalo = setInterval(() => void actualizar(), INTERVALO_CLIMA_MS);
+    return () => {
+      activo = false;
+      clearInterval(intervalo);
+    };
+  }, [cargando, lat, lng]);
+
+  return null;
+}
 
 /**
  * @description Decide qué grupo de rutas se puede abrir según haya sesión: (privado) con sesión, (publico) sin ella.
@@ -50,6 +79,7 @@ export default function RootLayout() {
   return (
     <ProveedorTema>
       <SesionProvider>
+        <SincronizarTemaClima />
         <ProveedorBandeja>
           <ProveedorNotificaciones>
             <Navegacion />
