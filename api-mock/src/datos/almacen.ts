@@ -13,6 +13,7 @@ import type {
   Emergencia,
   FichaEmergencia,
   Publicacion,
+  Sesion,
   RecursoCritico,
   ReporteVulnerabilidad,
   ServicioDirectorio,
@@ -44,6 +45,7 @@ export const almacen: {
   alertas: Repositorio<AlertaEmergencia>;
   celdas: Repositorio<ConteoCelda>;
   emergencias: Repositorio<Emergencia>;
+  sesiones: Repositorio<Sesion>;
 } = {
   // --- en memoria ---
   publicaciones: new RepositorioMemoria(semillas.publicaciones),
@@ -57,6 +59,7 @@ export const almacen: {
   alertas: persistente('alertas', semillas.alertas),
   celdas: persistente('celdas'),
   emergencias: persistente('emergencias'),
+  sesiones: persistente('sesiones'),
 };
 
 const subcolecciones = new Map<string, Repositorio<Entidad>>();

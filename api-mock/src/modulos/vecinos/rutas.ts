@@ -179,6 +179,6 @@ rutasVecinos.post('/yo/eliminar', async (req, res) => {
   avatares.delete(uid);
   borrarFotosIdentidad(uid);
   await almacen.usuarios.eliminar(uid);
-  cerrarSesionesDe(uid);
+  await cerrarSesionesDe(uid);
   res.status(204).end();
 });

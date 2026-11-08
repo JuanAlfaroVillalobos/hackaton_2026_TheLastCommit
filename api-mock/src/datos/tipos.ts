@@ -7,6 +7,13 @@ export interface Coordenada {
   lng: number;
 }
 
+/** `sesiones/{token}`: sesión simulada (hasta pasar a Firebase Auth). */
+export interface Sesion {
+  id: string;
+  uid: string;
+  creadoEn: number;
+}
+
 /** Cuenta + perfil. `clave` nunca sale de la API (ver aPublico en modulos/auth). */
 export interface Usuario {
   id: string;
