@@ -11,9 +11,7 @@ export function useTemaEmergencia(): void {
     return () => {
       // Si la zona sigue en emergencia, el rojo se queda (lo quita el módulo emergencia al terminar).
       if (hayEmergenciaActiva()) return;
-      const { temaClima } = useTemaStore.getState();
-      useTemaStore.getState().setTema(temaClima ?? previo ?? "normal");
-      previo = null;
+      useTemaStore.getState().salirDeEmergencia();
     };
   }, []);
 }

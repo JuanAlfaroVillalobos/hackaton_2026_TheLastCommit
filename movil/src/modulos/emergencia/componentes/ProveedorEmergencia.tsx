@@ -36,9 +36,10 @@ export function ProveedorEmergencia({ children }: { children: ReactNode }) {
   // Tema rojo mientras dure (las pantallas de /emergencia lo ponen también fuera de una emergencia).
   const id = emergencia?.id ?? null;
   useEffect(() => {
-    const { nombre, temaClima, setTema } = useTemaStore.getState();
+    const { nombre, setTema, salirDeEmergencia } = useTemaStore.getState();
     if (id) setTema("emergencia");
-    else if (nombre === "emergencia" && !rutaActual.current.startsWith(RUTA_MAPA)) setTema(temaClima ?? "normal");
+    // Vuelve al tema forzado (menú de demo), al del clima o al normal.
+    else if (nombre === "emergencia" && !rutaActual.current.startsWith(RUTA_MAPA)) salirDeEmergencia();
   }, [id]);
 
   // Navegación solo en los cambios: entra a una emergencia → P11 (y P12 si no respondió); termina → inicio.
