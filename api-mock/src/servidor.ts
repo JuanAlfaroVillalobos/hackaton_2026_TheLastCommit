@@ -6,6 +6,8 @@ import { COLECCIONES_FIRESTORE } from './datos/almacen.js';
 import { CLAVE_DEMO } from './datos/semillas.js';
 import { ejecutarTareasFavoresMock } from './modulos/favores/rutas.js';
 import { PROYECTO_FIREBASE } from './nucleo/firebase.js';
+import { INTERVALO_ALERTA_MS } from './modulos/emergencia/config.js';
+import { tareaEmergencia } from './modulos/emergencia/zona.js';
 
 const PUERTO = Number(process.env.PORT ?? 3000);
 const INTERVALO_TAREAS_MS = 60_000;
@@ -39,3 +41,9 @@ tareas.unref();
 ejecutarTareasFavoresMock().catch((error: unknown) => {
   console.error('Falló la ejecución inicial de tareas del módulo favores.', error);
 });
+
+// RF23 + RF25: «¿Estás bien?» cada minuto y cierre de las emergencias (en Functions será `cadaMinuto`).
+const tareasEmergencia = setInterval(() => {
+  tareaEmergencia().catch((error: unknown) => console.error('Falló la tarea programada del módulo emergencia.', error));
+}, INTERVALO_ALERTA_MS);
+tareasEmergencia.unref();

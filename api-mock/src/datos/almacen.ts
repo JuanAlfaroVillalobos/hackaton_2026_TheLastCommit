@@ -10,6 +10,7 @@ import * as semillas from './semillas.js';
 import type {
   AlertaEmergencia,
   ConteoCelda,
+  Emergencia,
   FichaEmergencia,
   Publicacion,
   RecursoCritico,
@@ -17,6 +18,7 @@ import type {
   ServicioDirectorio,
   Usuario,
   VecinoEmergencia,
+  VecinoEnEmergencia,
 } from './tipos.js';
 
 export const USA_FIRESTORE = process.env.ALMACEN === 'firestore';
@@ -41,6 +43,7 @@ export const almacen: {
   fichasEmergencia: Repositorio<FichaEmergencia>;
   alertas: Repositorio<AlertaEmergencia>;
   celdas: Repositorio<ConteoCelda>;
+  emergencias: Repositorio<Emergencia>;
 } = {
   // --- en memoria ---
   publicaciones: new RepositorioMemoria(semillas.publicaciones),
@@ -53,4 +56,21 @@ export const almacen: {
   usuarios: persistente('usuarios', semillas.usuarios),
   alertas: persistente('alertas', semillas.alertas),
   celdas: persistente('celdas'),
+  emergencias: persistente('emergencias'),
 };
+
+const subcolecciones = new Map<string, Repositorio<Entidad>>();
+
+/** Subcolección (p. ej. `emergencias/{id}/vecinos`): Firestore o memoria, igual que su colección padre. */
+function subcoleccion<T extends Entidad>(ruta: string): Repositorio<T> {
+  let repo = subcolecciones.get(ruta);
+  if (!repo) {
+    repo = USA_FIRESTORE ? new RepositorioFirestore<Entidad>(ruta) : new RepositorioMemoria<Entidad>();
+    subcolecciones.set(ruta, repo);
+  }
+  return repo as unknown as Repositorio<T>;
+}
+
+/** `emergencias/{id}/vecinos/{uid}` (RF21, RF22, RF24). */
+export const vecinosDeEmergencia = (emergenciaId: string) =>
+  subcoleccion<VecinoEnEmergencia>(`emergencias/${emergenciaId}/vecinos`);

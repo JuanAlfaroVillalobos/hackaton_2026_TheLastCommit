@@ -191,6 +191,8 @@ export interface AlertaEmergencia {
   estado: 'ACTIVA' | 'ATENDIDA' | 'CANCELADA';
   canal: 'APP' | 'SMS';
   creadoEn: number;
+  /** Emergencia a la que se sumó la alerta (RF21), si la hubo. */
+  emergenciaId?: string | null;
 }
 
 /**
@@ -207,4 +209,37 @@ export interface ConteoCelda {
   ventanaDesde: number;
   ultimaAlertaEn: number | null;
   actualizadoEn: number;
+}
+
+// --- modo emergencia (RF21–RF25, README 5.2) ---
+/** Firestore: `emergencias/{id}`. Cubre la celda que cruzó el umbral y sus 6 vecinas (RN-11). */
+export interface Emergencia {
+  id: string;
+  celdaCentro: string;
+  /** celdaCentro + sus 6 vecinas (k = 1). */
+  celdas: string[];
+  estado: 'ACTIVA' | 'FINALIZADA';
+  activadaEn: number;
+  ultimaAlertaEn: number;
+  finalizadaEn: number | null;
+  /** RF25: por qué terminó. */
+  motivoFin: 'TODOS_A_SALVO' | 'SIN_ALERTAS' | null;
+}
+
+export type EstadoVecinoEmergencia = 'SIN_RESPONDER' | 'NECESITA_AYUDA' | 'A_SALVO';
+
+/** Firestore: `emergencias/{id}/vecinos/{uid}`. El id es el uid del vecino. */
+export interface VecinoEnEmergencia {
+  id: string;
+  uid: string;
+  nombre: string;
+  estado: EstadoVecinoEmergencia;
+  lat: number;
+  lng: number;
+  /** Última alerta o «Necesito ayuda»; null si nunca pidió ayuda (entró como SIN_RESPONDER). */
+  ultimaAlertaEn: number | null;
+  /** Última vez que respondió en P12 (RF24). */
+  respondidoEn: number | null;
+  /** Momento en que entró a la emergencia. */
+  creadoEn: number;
 }
