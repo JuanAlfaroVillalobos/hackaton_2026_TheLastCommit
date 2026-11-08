@@ -17,12 +17,17 @@ function temaInicial(): NombreTema {
 
 type EstadoTema = {
   nombre: NombreTema;
+  temaClima: Exclude<NombreTema, "emergencia"> | null;
   setTema: (nombre: NombreTema) => void;
+  setTemaClima: (nombre: Exclude<NombreTema, "emergencia">) => void;
 };
 
 export const useTemaStore = create<EstadoTema>((set) => ({
   nombre: temaInicial(),
+  temaClima: null,
   setTema: (nombre) => set({ nombre }),
+  setTemaClima: (temaClima) =>
+    set((estado) => ({ temaClima, nombre: estado.nombre === "emergencia" ? "emergencia" : temaClima })),
 }));
 
 const ContextoTema = createContext<Tema>(TEMAS.normal);

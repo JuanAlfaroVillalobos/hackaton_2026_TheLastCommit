@@ -14,7 +14,8 @@ export function useTemaEmergencia(): void {
     if (nombre !== "emergencia") previo = nombre;
     setTema("emergencia");
     return () => {
-      useTemaStore.getState().setTema(previo ?? "normal");
+      const { temaClima } = useTemaStore.getState();
+      useTemaStore.getState().setTema(temaClima ?? previo ?? "normal");
       previo = null;
     };
   }, []);

@@ -2,8 +2,7 @@
 // Token de FCM del dispositivo (`usuarios/{uid}/dispositivos/{token}`, README 5.4). Con la API
 // simulada se guarda en POST /vecinos/yo/dispositivos; el backend lo usa en notificar().
 import { api } from '@/nucleo/api';
-import { deleteToken, getMessaging, getToken, onTokenRefresh } from '@react-native-firebase/messaging';
-import { Platform } from 'react-native';
+import { fcm } from './fcm';
 
 let tokenActual: string | null = null;
 let quitarEscucha: (() => void) | null = null;
@@ -12,15 +11,16 @@ let quitarEscucha: (() => void) | null = null;
  * @description Obtiene el token de FCM y lo registra en el perfil; se vuelve a registrar si FCM lo rota. No falla si FCM no está disponible.
  */
 export async function registrarDispositivo(): Promise<string | null> {
-  if (Platform.OS !== 'android') return null;
+  const m = fcm();
+  if (!m) return null;
   try {
-    const mensajeria = getMessaging();
-    const token = await getToken(mensajeria);
+    const mensajeria = m.getMessaging();
+    const token = await m.getToken(mensajeria);
     tokenActual = token;
     await api('/vecinos/yo/dispositivos', { metodo: 'POST', cuerpo: { token, plataforma: 'android' } });
 
     quitarEscucha?.();
-    quitarEscucha = onTokenRefresh(mensajeria, (nuevo) => {
+    quitarEscucha = m.onTokenRefresh(mensajeria, (nuevo) => {
       tokenActual = nuevo;
       void api('/vecinos/yo/dispositivos', { metodo: 'POST', cuerpo: { token: nuevo, plataforma: 'android' } }).catch(() => undefined);
     });
@@ -39,7 +39,8 @@ export async function darDeBajaDispositivo(): Promise<void> {
   quitarEscucha = null;
   const token = tokenActual;
   tokenActual = null;
-  if (!token || Platform.OS !== 'android') return;
+  const m = fcm();
+  if (!token || !m) return;
   await api(`/vecinos/yo/dispositivos/${encodeURIComponent(token)}`, { metodo: 'DELETE' }).catch(() => undefined);
-  await deleteToken(getMessaging()).catch(() => undefined);
+  await m.deleteToken(m.getMessaging()).catch(() => undefined);
 }
