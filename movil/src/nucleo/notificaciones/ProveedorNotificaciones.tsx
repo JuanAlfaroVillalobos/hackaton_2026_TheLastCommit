@@ -26,40 +26,44 @@ export function ProveedorNotificaciones({ children }: { children: ReactNode }) {
     const limpiezas: (() => void)[] = [];
 
     void (async () => {
-      if (Platform.OS === 'android') {
-        await crearCanales().catch(() => undefined);
-        await pedirPermisoNotificaciones();
-        if (!modoDesarrollo) await registrarDispositivo();
+      try {
+        if (Platform.OS === 'android') {
+          await crearCanales().catch(() => undefined);
+          await pedirPermisoNotificaciones();
+          if (!modoDesarrollo) await registrarDispositivo();
 
-        // Notificación que abrió la app desde cerrada.
-        const inicial = await notifee.getInitialNotification().catch(() => null);
-        const cargaInicial = aCarga(inicial?.notification.data);
-        if (vigente && cargaInicial) {
-          await alPulsar(cargaInicial, inicial?.pressAction.id === 'default' ? null : (inicial?.pressAction.id ?? null), false);
-          if (cargaInicial.ruta) setTimeout(() => router.push(cargaInicial.ruta as never), 300);
-        }
-
-        limpiezas.push(
-          notifee.onForegroundEvent(({ type, detail }) => {
-            if (type !== EventType.PRESS && type !== EventType.ACTION_PRESS) return;
-            const carga = aCarga(detail.notification?.data);
-            if (carga) void alPulsar(carga, type === EventType.ACTION_PRESS ? (detail.pressAction?.id ?? null) : null);
-          }),
-        );
-
-        const m = fcm();
-        try {
-          if (m) {
-            limpiezas.push(
-              m.onMessage(m.getMessaging(), async (mensaje) => {
-                const carga = aCarga(mensaje.data);
-                if (carga) await despachar(carga, { enPrimerPlano: true, origen: 'fcm' });
-              }),
-            );
+          // Notificación que abrió la app desde cerrada.
+          const inicial = await notifee.getInitialNotification().catch(() => null);
+          const cargaInicial = aCarga(inicial?.notification.data);
+          if (vigente && cargaInicial) {
+            await alPulsar(cargaInicial, inicial?.pressAction.id === 'default' ? null : (inicial?.pressAction.id ?? null), false);
+            if (cargaInicial.ruta) setTimeout(() => router.push(cargaInicial.ruta as never), 300);
           }
-        } catch {
-          // sin FCM: queda el sondeo
+
+          limpiezas.push(
+            notifee.onForegroundEvent(({ type, detail }) => {
+              if (type !== EventType.PRESS && type !== EventType.ACTION_PRESS) return;
+              const carga = aCarga(detail.notification?.data);
+              if (carga) void alPulsar(carga, type === EventType.ACTION_PRESS ? (detail.pressAction?.id ?? null) : null);
+            }),
+          );
+
+          const m = fcm();
+          try {
+            if (m) {
+              limpiezas.push(
+                m.onMessage(m.getMessaging(), async (mensaje) => {
+                  const carga = aCarga(mensaje.data);
+                  if (carga) await despachar(carga, { enPrimerPlano: true, origen: 'fcm' });
+                }),
+              );
+            }
+          } catch {
+            // sin FCM: queda el sondeo
+          }
         }
+      } catch {
+        // Sin módulo nativo (Expo Go): quedan el sondeo y la app sin notificaciones del sistema.
       }
       if (vigente && !modoDesarrollo) limpiezas.push(iniciarSondeo());
     })();
