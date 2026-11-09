@@ -3,15 +3,18 @@ import { Boton } from '@/compartido/ui';
 import { ErrorApi } from '@/nucleo/api';
 import { useSesion } from '@/nucleo/sesion';
 import * as Haptics from 'expo-haptics';
-import { router, usePreventRemove } from 'expo-router';
+import { usePreventRemove } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../componentes/Avatar';
 import { CajaAviso } from '../componentes/CajaAviso';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { Pantalla } from '../componentes/Pantalla';
 import { Titular } from '../componentes/Titular';
 import { consultarDisponibilidad } from '../servicios/disponibilidad';
+import { cambiarFotoPerfil, quitarFotoPerfil } from '../servicios/fotoPerfil';
 import { errorNombre, errorTelefono, formatearTelefono, LIMITES, normalizarNombre } from '../validaciones';
+import { volver } from '@/nucleo/navegacion';
 
 type Campo = 'nombre' | 'barrio' | 'telefono';
 
@@ -29,11 +32,12 @@ function errorBarrio(valor: string): string | undefined {
 }
 
 /**
- * @description Editar mis datos (P10, RF05): nombre, barrio y celular, con las mismas validaciones del registro. Avisa si sales con cambios sin guardar.
+ * @description Editar mis datos (P10, RF05, RF06): foto, nombre, barrio y celular, con las mismas validaciones del registro. Avisa si sales con cambios sin guardar.
  */
 export default function EditarPerfilPantalla() {
   const { colores } = useTema();
-  const { perfil, actualizarPerfil } = useSesion();
+  const { perfil, actualizarPerfil, recargarPerfil, modoDesarrollo } = useSesion();
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   // Valores al abrir la pantalla, para saber qué cambió.
   const [original] = useState(() => ({
     nombre: perfil?.nombre ?? '',
@@ -93,7 +97,7 @@ export default function EditarPerfilPantalla() {
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       descartar();
-      router.back();
+      volver();
     } catch (error) {
       setGuardando(false);
       const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
@@ -104,9 +108,52 @@ export default function EditarPerfilPantalla() {
     }
   };
 
+  const cambiarFoto = async () => {
+    if (modoDesarrollo) {
+      Alert.alert('Foto de perfil', 'En modo desarrollo sin la API no se puede subir la foto. Inicia sesión con una cuenta.');
+      return;
+    }
+    setSubiendoFoto(true);
+    try {
+      if (await cambiarFotoPerfil()) await recargarPerfil();
+    } catch (error) {
+      Alert.alert('No se subió tu foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
+  const quitarFoto = () => {
+    Alert.alert('¿Quitar tu foto?', 'Tus vecinos verán tus iniciales.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Quitar foto',
+        style: 'destructive',
+        onPress: () =>
+          void quitarFotoPerfil()
+            .then(() => recargarPerfil())
+            .catch((error: unknown) => Alert.alert('No se quitó tu foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.')),
+      },
+    ]);
+  };
+
   return (
     <Pantalla>
       <Titular conVolver etiqueta="Mi cuenta" titulo="Tus datos." subtitulo="Tus vecinos ven tu nombre. Tu celular nunca se publica." />
+
+      <View style={styles.foto}>
+        <Avatar nombre={perfil?.nombre ?? 'Vecino'} fotoUrl={perfil?.fotoUrl} tamano={72} />
+        <View style={styles.botonesFoto}>
+          <Boton
+            texto={subiendoFoto ? 'Subiendo…' : perfil?.fotoUrl ? 'Cambiar foto' : 'Agregar foto'}
+            icono="photo_camera"
+            variante="secundario"
+            deshabilitado={subiendoFoto}
+            onPress={() => void cambiarFoto()}
+          />
+          {perfil?.fotoUrl && !subiendoFoto ? <Boton texto="Quitar foto" variante="enlace" onPress={quitarFoto} /> : null}
+        </View>
+      </View>
 
       <View style={styles.formulario}>
         <CampoTexto
@@ -180,6 +227,8 @@ export default function EditarPerfilPantalla() {
 }
 
 const styles = StyleSheet.create({
+  foto: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.l },
+  botonesFoto: { flex: 1, gap: ESPACIO.xs, alignItems: 'flex-start' },
   formulario: { gap: ESPACIO.l },
   correo: { gap: ESPACIO.xs },
 });

@@ -73,7 +73,8 @@ const config: ExpoConfig = {
     [
       'expo-build-properties',
       {
-        android: { usesCleartextTraffic: false },
+        // true: la API de la demo corre en la computadora por http (http://<ip>:3000). Con HTTPS se puede volver a false.
+        android: { usesCleartextTraffic: true },
       },
     ],
   ],

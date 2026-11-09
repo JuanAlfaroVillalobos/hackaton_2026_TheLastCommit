@@ -4,12 +4,12 @@ import { MapaBase } from '@/compartido/ui/MapaBase';
 import type { Coordenada } from '@/compartido/utilidades/geo';
 import { usePerfil } from '@/nucleo/sesion';
 import { leerPinInicial, resolverPinManual } from '@/nucleo/ubicacion';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CajaAviso } from '../componentes/CajaAviso';
 import { Titular } from '../componentes/Titular';
+import { volver } from '@/nucleo/navegacion';
 
 /** Plaza de Armas de Trujillo: centro por defecto si no hay ninguna referencia. */
 const CENTRO_POR_DEFECTO: Coordenada = { lat: -8.1116, lng: -79.0288 };
@@ -35,7 +35,7 @@ export default function ElegirUbicacionPantalla() {
   const terminar = (coordenada: Coordenada | null) => {
     resuelto.current = true;
     resolverPinManual(coordenada);
-    router.back();
+    volver();
   };
 
   return (

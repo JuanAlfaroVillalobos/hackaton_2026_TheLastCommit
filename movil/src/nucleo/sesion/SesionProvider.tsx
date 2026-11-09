@@ -1,6 +1,8 @@
 import { OFICIOS, type OficioId } from '@/compartido/constantes/oficios';
 import type { Coordenada } from '@/compartido/utilidades/geo';
 import { api, configurarRenovacion, ErrorApi, esErrorDeRed, fijarToken } from '@/nucleo/api';
+// Efecto: en la web, Alert.alert usa los diálogos del navegador (react-native-web no muestra nada).
+import { esWeb } from '@/nucleo/dialogo';
 import { darDeBajaDispositivo } from '@/nucleo/notificaciones/dispositivo';
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -99,11 +101,26 @@ function aPerfil(u: UsuarioApi): PerfilVecino {
 
 const aUsuario = (p: PerfilVecino): UsuarioSesion => ({ uid: p.uid, displayName: p.nombre, email: p.correo });
 
+/** En la web no hay SecureStore: la sesión se guarda en localStorage del navegador (solo para la demo web). */
+const almacenWeb = (): Storage | null => {
+  try {
+    return esWeb && typeof localStorage !== 'undefined' ? localStorage : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
- * @description Guarda o borra un valor; SecureStore puede fallar (web, almacenamiento bloqueado) y la sesión sigue en memoria.
+ * @description Guarda o borra un valor; si el almacenamiento falla, la sesión sigue en memoria.
  */
 async function guardarSeguro(clave: string, valor: string | null): Promise<void> {
   try {
+    const web = almacenWeb();
+    if (web) {
+      if (valor) web.setItem(clave, valor);
+      else web.removeItem(clave);
+      return;
+    }
     if (valor) await SecureStore.setItemAsync(clave, valor);
     else await SecureStore.deleteItemAsync(clave);
   } catch {
@@ -111,7 +128,18 @@ async function guardarSeguro(clave: string, valor: string | null): Promise<void>
   }
 }
 
-const leerSeguro = (clave: string) => SecureStore.getItemAsync(clave).catch(() => null);
+/**
+ * @description Lee un valor guardado, o null si no existe o el almacenamiento no está disponible.
+ */
+async function leerSeguro(clave: string): Promise<string | null> {
+  try {
+    const web = almacenWeb();
+    if (web) return web.getItem(clave);
+    return await SecureStore.getItemAsync(clave);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * @description Expone el usuario y el perfil de la sesión y un modo de desarrollo para entrar sin cuenta.

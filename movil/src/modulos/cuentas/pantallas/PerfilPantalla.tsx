@@ -256,7 +256,7 @@ export default function PerfilPantalla() {
         <FilaOpcion
           icono="badge"
           titulo="Mis datos"
-          detalle="Nombre, barrio y celular."
+          detalle="Foto, nombre, barrio y celular."
           onPress={() => router.push('/editar-perfil')}
         />
         <FilaOpcion
