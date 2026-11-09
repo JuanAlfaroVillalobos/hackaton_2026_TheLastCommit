@@ -2,7 +2,7 @@
 // enviarAccion(): con internet → API; sin internet → SMS (si el tipo tiene transporte) y cola.
 // Al volver la señal la cola se vacía en orden; cada acción lleva su idAccion para que la API no
 // la procese dos veces aunque también haya llegado por SMS (RN-20).
-import { api, ErrorApi } from '@/nucleo/api';
+import { api, ErrorApi, esErrorDeRed } from '@/nucleo/api';
 import { estaEnLinea } from '@/nucleo/red/conexion';
 import { randomUUID } from 'expo-crypto';
 import { Alert } from 'react-native';
@@ -55,7 +55,8 @@ export async function enviarAccion<T = unknown>(solicitud: SolicitudAccion): Pro
       const datos = await api<T>(solicitud.ruta, { metodo, cuerpo: solicitud.cuerpo, idAccion });
       return { estado: 'enviada', idAccion, datos };
     } catch (error) {
-      if (!(error instanceof ErrorApi && error.codigo === 'SIN_CONEXION')) throw error;
+      // Sin conexión o sin respuesta a tiempo: se guarda; la API ignora la copia si ya llegó (RN-20).
+      if (!esErrorDeRed(error)) throw error;
     }
   }
 
@@ -103,7 +104,7 @@ async function vaciar(): Promise<void> {
     } catch (error) {
       const e = error instanceof ErrorApi ? error : new ErrorApi(0, 'SIN_CONEXION', 'Sin conexión.');
       // Sin red, sesión vencida o servidor caído: se reintenta después, sin perder el orden.
-      if (e.codigo === 'SIN_CONEXION' || e.estado === 401 || e.estado >= 500) {
+      if (esErrorDeRed(e) || e.estado === 401 || e.estado >= 500) {
         await actualizarAccion(accion.idAccion, { intentos: accion.intentos + 1 });
         break;
       }

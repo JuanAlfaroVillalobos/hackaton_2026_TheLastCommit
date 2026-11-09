@@ -1,14 +1,24 @@
 import { OFICIOS, type OficioId } from '@/compartido/constantes/oficios';
 import type { Coordenada } from '@/compartido/utilidades/geo';
-import { api, ErrorApi, fijarToken } from '@/nucleo/api';
+import { api, configurarRenovacion, ErrorApi, esErrorDeRed, fijarToken } from '@/nucleo/api';
+// Efecto: en la web, Alert.alert usa los diálogos del navegador (react-native-web no muestra nada).
+import { esWeb } from '@/nucleo/dialogo';
 import { darDeBajaDispositivo } from '@/nucleo/notificaciones/dispositivo';
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { CambiosPerfil, DatosRegistro, PerfilVecino, UsuarioApi, UsuarioSesion } from './tipos';
+import type {
+  CambiosPerfil,
+  DatosRegistro,
+  PerfilVecino,
+  RespuestaSesion,
+  ResultadoRecuperacion,
+  UsuarioApi,
+  UsuarioSesion,
+} from './tipos';
 
-// FIREBASE DESACTIVADO: la sesión viene de la API simulada (api-mock/). Al volver a Firebase Auth,
-// `ingresar`/`registrar`/`salir` llaman a signInWithEmailAndPassword/createUser.../signOut, `usuario`
-// sale de onAuthStateChanged y el ID token se manda a la API con fijarToken(). Las pantallas no cambian.
+// La sesión viene de la API (api-mock/). La API decide cómo se autentica: con Firebase Auth
+// (AUTENTICACION=firebase: el token es un ID token de 1 h que se renueva solo con `renovacion`) o con sus
+// propias sesiones (modo local). La app funciona igual en los dos modos.
 
 interface EstadoSesion {
   usuario: UsuarioSesion | null;
@@ -22,10 +32,14 @@ interface EstadoSesion {
   /** true justo después de crear la cuenta: la navegación abre «Completar perfil» una vez (RF05). */
   recienRegistrado: boolean;
   olvidarRegistro: () => void;
-  /** RF07: pide el código de 6 dígitos. Devuelve el código solo en la demo (la API simulada no envía correos). */
-  pedirCodigoClave: (correo: string) => Promise<string | undefined>;
-  /** RF07: cambia la clave con el código y deja la sesión abierta. */
+  /** RF07: pide el código (modo local) o el correo con el enlace (Firebase Auth). */
+  pedirCodigoClave: (correo: string) => Promise<ResultadoRecuperacion>;
+  /** RF07, modo local: cambia la clave con el código y deja la sesión abierta. */
   restablecerClave: (correo: string, codigo: string, clave: string) => Promise<void>;
+  /** Guarda tokens nuevos sin tocar el perfil (p. ej. después de cambiar la clave). */
+  actualizarTokens: (token: string, renovacion: string | null) => Promise<void>;
+  /** Firebase Auth: reenvía el correo para verificar la dirección. */
+  reenviarVerificacion: () => Promise<void>;
   salir: () => Promise<void>;
   recargarPerfil: () => Promise<void>;
   actualizarPerfil: (cambios: CambiosPerfil) => Promise<void>;
@@ -37,6 +51,8 @@ interface EstadoSesion {
 
 /** Clave de SecureStore del token; también la lee la tarea de ubicación en segundo plano. */
 export const CLAVE_TOKEN = 'vecinos.sesion.token';
+/** Clave de SecureStore del refresh token de Firebase (solo con AUTENTICACION=firebase en la API). */
+const CLAVE_RENOVACION = 'vecinos.sesion.renovacion';
 
 /** Cuenta sembrada en api-mock; «Entrar sin cuenta» la usa si la API está arriba. */
 const CUENTA_DEMO = { correo: 'ana@vecinos.pe', clave: 'vecinos123' };
@@ -55,6 +71,7 @@ const PERFIL_DEMO: PerfilVecino = {
   ubicacionEn: null,
   estadoIdentidad: 'NO_ENVIADA',
   validador: false,
+  correoVerificado: null,
 };
 
 const SesionContext = createContext<EstadoSesion | null>(null);
@@ -78,25 +95,54 @@ function aPerfil(u: UsuarioApi): PerfilVecino {
     ubicacionEn: u.ubicacionEn ?? null,
     estadoIdentidad: u.estadoIdentidad ?? 'NO_ENVIADA',
     validador: u.validador ?? false,
+    correoVerificado: u.correoVerificado ?? null,
   };
 }
 
 const aUsuario = (p: PerfilVecino): UsuarioSesion => ({ uid: p.uid, displayName: p.nombre, email: p.correo });
 
-/**
- * @description Guarda o borra el token; SecureStore puede fallar (web, almacenamiento bloqueado) y la sesión sigue en memoria.
- */
-async function guardarToken(token: string | null): Promise<void> {
+/** En la web no hay SecureStore: la sesión se guarda en localStorage del navegador (solo para la demo web). */
+const almacenWeb = (): Storage | null => {
   try {
-    if (token) await SecureStore.setItemAsync(CLAVE_TOKEN, token);
-    else await SecureStore.deleteItemAsync(CLAVE_TOKEN);
+    return esWeb && typeof localStorage !== 'undefined' ? localStorage : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * @description Guarda o borra un valor; si el almacenamiento falla, la sesión sigue en memoria.
+ */
+async function guardarSeguro(clave: string, valor: string | null): Promise<void> {
+  try {
+    const web = almacenWeb();
+    if (web) {
+      if (valor) web.setItem(clave, valor);
+      else web.removeItem(clave);
+      return;
+    }
+    if (valor) await SecureStore.setItemAsync(clave, valor);
+    else await SecureStore.deleteItemAsync(clave);
   } catch {
     // sin persistencia: al reabrir la app pedirá ingresar de nuevo
   }
 }
 
 /**
- * @description Expone el usuario y el perfil de la sesión (hoy de la API simulada) y un modo de desarrollo para entrar sin cuenta.
+ * @description Lee un valor guardado, o null si no existe o el almacenamiento no está disponible.
+ */
+async function leerSeguro(clave: string): Promise<string | null> {
+  try {
+    const web = almacenWeb();
+    if (web) return web.getItem(clave);
+    return await SecureStore.getItemAsync(clave);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @description Expone el usuario y el perfil de la sesión y un modo de desarrollo para entrar sin cuenta.
  */
 export function SesionProvider({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<PerfilVecino | null>(null);
@@ -104,22 +150,49 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [modoDesarrollo, setModoDesarrollo] = useState(false);
   const [recienRegistrado, setRecienRegistrado] = useState(false);
 
+  const guardarTokens = useCallback(async (token: string | null, renovacion: string | null) => {
+    fijarToken(token);
+    await Promise.all([guardarSeguro(CLAVE_TOKEN, token), guardarSeguro(CLAVE_RENOVACION, renovacion)]);
+  }, []);
+
+  // Con Firebase Auth el token vence cada hora: el cliente de la API llama a esto y reintenta solo.
+  useEffect(() => {
+    configurarRenovacion(async () => {
+      const renovacion = await leerSeguro(CLAVE_RENOVACION);
+      if (!renovacion) return null;
+      try {
+        const r = await api<{ token: string; renovacion: string | null }>('/auth/renovar', {
+          metodo: 'POST',
+          cuerpo: { renovacion },
+          sinRenovar: true,
+        });
+        await guardarTokens(r.token, r.renovacion);
+        return r.token;
+      } catch (error) {
+        // La renovación fue rechazada (clave cambiada, cuenta borrada): se cierra la sesión local.
+        if (error instanceof ErrorApi && error.estado === 401) {
+          await guardarTokens(null, null);
+          setPerfil(null);
+        }
+        return null;
+      }
+    });
+    return () => configurarRenovacion(null);
+  }, [guardarTokens]);
+
   // Restaura la sesión guardada; si la API no responde o el token ya no vale, se entra sin sesión.
   useEffect(() => {
     let vigente = true;
     (async () => {
       try {
-        const token = await SecureStore.getItemAsync(CLAVE_TOKEN).catch(() => null);
+        const token = await leerSeguro(CLAVE_TOKEN);
         if (!token) return;
         fijarToken(token);
         const yo = await api<UsuarioApi>('/vecinos/yo');
         if (vigente) setPerfil(aPerfil(yo));
       } catch (error) {
         // Sin conexión se conserva el token para reintentar al volver; un 401 lo invalida.
-        if (error instanceof ErrorApi && error.estado === 401) {
-          fijarToken(null);
-          await guardarToken(null);
-        }
+        if (error instanceof ErrorApi && error.estado === 401) await guardarTokens(null, null);
       } finally {
         if (vigente) setCargando(false);
       }
@@ -127,67 +200,77 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [guardarTokens]);
 
-  const abrir = useCallback(async (token: string, u: UsuarioApi) => {
-    fijarToken(token);
-    await guardarToken(token);
-    setPerfil(aPerfil(u));
-  }, []);
+  const abrir = useCallback(
+    async ({ token, renovacion, usuario }: RespuestaSesion) => {
+      await guardarTokens(token, renovacion);
+      setPerfil(aPerfil(usuario));
+    },
+    [guardarTokens],
+  );
 
   const ingresar = useCallback(
     async (correo: string, clave: string) => {
-      const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/ingresar', {
+      const r = await api<RespuestaSesion>('/auth/ingresar', {
         metodo: 'POST',
         cuerpo: { correo: correo.trim().toLowerCase(), clave },
       });
-      await abrir(token, usuario);
+      await abrir(r);
     },
     [abrir],
   );
 
   const registrar = useCallback(
     async ({ nombre, correo, telefono, clave, aceptaTerminos }: DatosRegistro) => {
-      const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/registro', {
+      const r = await api<RespuestaSesion>('/auth/registro', {
         metodo: 'POST',
         cuerpo: { nombre: nombre.trim(), correo: correo.trim().toLowerCase(), telefono: `+51${telefono}`, clave, aceptaTerminos },
       });
       setRecienRegistrado(true);
-      await abrir(token, usuario);
+      await abrir(r);
     },
     [abrir],
   );
 
   const olvidarRegistro = useCallback(() => setRecienRegistrado(false), []);
 
-  const pedirCodigoClave = useCallback(async (correo: string) => {
-    const { codigoDemo } = await api<{ mensaje: string; codigoDemo?: string }>('/auth/recuperar', {
+  const pedirCodigoClave = useCallback(async (correo: string): Promise<ResultadoRecuperacion> => {
+    const r = await api<{ modo?: 'codigo' | 'enlace'; codigoDemo?: string }>('/auth/recuperar', {
       metodo: 'POST',
       cuerpo: { correo: correo.trim().toLowerCase() },
     });
-    return codigoDemo;
+    return { modo: r.modo ?? 'codigo', codigoDemo: r.codigoDemo };
   }, []);
 
   const restablecerClave = useCallback(
     async (correo: string, codigo: string, clave: string) => {
-      const { token, usuario } = await api<{ token: string; usuario: UsuarioApi }>('/auth/restablecer', {
+      const r = await api<RespuestaSesion>('/auth/restablecer', {
         metodo: 'POST',
         cuerpo: { correo: correo.trim().toLowerCase(), codigo: codigo.trim(), clave },
       });
-      await abrir(token, usuario);
+      await abrir(r);
     },
     [abrir],
   );
+
+  const actualizarTokens = useCallback(
+    (token: string, renovacion: string | null) => guardarTokens(token, renovacion),
+    [guardarTokens],
+  );
+
+  const reenviarVerificacion = useCallback(async () => {
+    await api('/auth/verificar-correo', { metodo: 'POST' });
+  }, []);
 
   const salir = useCallback(async () => {
     // Antes de cerrar sesión: este teléfono deja de recibir avisos de la cuenta.
     await darDeBajaDispositivo();
     await api('/auth/salir', { metodo: 'POST' }).catch(() => undefined);
-    fijarToken(null);
-    await guardarToken(null);
+    await guardarTokens(null, null);
     setPerfil(null);
     setModoDesarrollo(false);
-  }, []);
+  }, [guardarTokens]);
 
   const recargarPerfil = useCallback(async () => {
     if (modoDesarrollo && !perfil) return;
@@ -202,7 +285,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         setPerfil(aPerfil(yo));
       } catch (error) {
         // En modo desarrollo sin API, el cambio se guarda solo en memoria para poder probar las pantallas.
-        if (modoDesarrollo && error instanceof ErrorApi && (error.codigo === 'SIN_CONEXION' || error.codigo === 'SIN_SESION')) {
+        if (modoDesarrollo && error instanceof ErrorApi && (esErrorDeRed(error) || error.codigo === 'SIN_SESION')) {
           setPerfil((actual) => (actual ? { ...actual, ...cambios } : actual));
           return;
         }
@@ -245,6 +328,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       olvidarRegistro,
       pedirCodigoClave,
       restablecerClave,
+      actualizarTokens,
+      reenviarVerificacion,
       salir,
       recargarPerfil,
       actualizarPerfil,
@@ -262,6 +347,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       olvidarRegistro,
       pedirCodigoClave,
       restablecerClave,
+      actualizarTokens,
+      reenviarVerificacion,
       salir,
       recargarPerfil,
       actualizarPerfil,

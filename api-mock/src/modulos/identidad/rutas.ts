@@ -6,22 +6,22 @@ import { almacen } from '../../datos/almacen.js';
 import type { Usuario } from '../../datos/tipos.js';
 import { requiereSesion } from '../../nucleo/autenticacion.js';
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
+import { borrarArchivo, guardarArchivo, leerArchivo, MAX_BYTES_ARCHIVO } from '../../nucleo/archivos.js';
 import { notificar } from '../../nucleo/notificar.js';
 import { texto } from '../../nucleo/utilidades.js';
 import { estadoDe, esValidador } from './reglas.js';
 
 type TipoFoto = 'dni' | 'selfie';
-const fotos = new Map<string, { tipo: string; datos: Buffer }>();
-const claveFoto = (uid: string, tipo: TipoFoto) => `${uid}:${tipo}`;
+/** Ruta privada de Storage (README 5.4): solo la leen el dueño y los validadores, a través de la API. */
+const rutaFoto = (uid: string, tipo: TipoFoto) => `identidad/${uid}/${tipo}`;
 
-const MAX_FOTO_BYTES = 2 * 1024 * 1024;
+const MAX_FOTO_BYTES = MAX_BYTES_ARCHIVO;
 const LETRAS = 'A-Za-zÀ-ÖØ-öø-ÿ';
 const NOMBRES = new RegExp(`^[${LETRAS}]+(?:['-][${LETRAS}]+)*(?: [${LETRAS}]+(?:['-][${LETRAS}]+)*)*$`);
 
 /** Al eliminar la cuenta: borra el DNI y la selfie guardados. */
-export function borrarFotosIdentidad(uid: string): void {
-  fotos.delete(claveFoto(uid, 'dni'));
-  fotos.delete(claveFoto(uid, 'selfie'));
+export async function borrarFotosIdentidad(uid: string): Promise<void> {
+  await Promise.all([borrarArchivo(rutaFoto(uid, 'dni')), borrarArchivo(rutaFoto(uid, 'selfie'))]);
 }
 
 export const rutasIdentidad = Router();
@@ -56,7 +56,7 @@ function leerFoto(valor: unknown, nombre: string): { tipo: string; datos: Buffer
   if (!coincide) throw datosInvalidos(`Falta la ${nombre} o no es una imagen válida.`);
   const datos = Buffer.from(coincide[2], 'base64');
   if (datos.length < 5 * 1024) throw datosInvalidos(`La ${nombre} es demasiado pequeña. Tómala de nuevo.`);
-  if (datos.length > MAX_FOTO_BYTES) throw datosInvalidos(`La ${nombre} pesa más de 2 MB. Tómala de nuevo.`);
+  if (datos.length > MAX_FOTO_BYTES) throw datosInvalidos(`La ${nombre} pesa demasiado (máximo 700 KB). Tómala de nuevo.`);
   return { tipo: coincide[1], datos };
 }
 
@@ -99,8 +99,7 @@ rutasIdentidad.post('/yo', async (req, res) => {
     throw conflicto('Ese DNI ya está registrado en otra cuenta. Si es un error, escríbenos.');
   }
 
-  fotos.set(claveFoto(uid, 'dni'), fotoDni);
-  fotos.set(claveFoto(uid, 'selfie'), selfie);
+  await Promise.all([guardarArchivo(rutaFoto(uid, 'dni'), fotoDni), guardarArchivo(rutaFoto(uid, 'selfie'), selfie)]);
   const actualizado = await almacen.usuarios.actualizar(uid, {
     identidad: { estado: 'PENDIENTE', dni, nombres, apellidos, enviadaEn: Date.now(), revisadaEn: null, motivo: null },
   });
@@ -127,7 +126,7 @@ rutasIdentidad.get('/:uid/fotos/:tipo', async (req, res) => {
   if (!pide || (pide.id !== req.params.uid && !esValidador(pide))) {
     throw new ErrorHttp(403, 'SIN_PERMISO', 'No puedes ver esta foto.');
   }
-  const foto = fotos.get(claveFoto(String(req.params.uid), tipo));
+  const foto = await leerArchivo(rutaFoto(String(req.params.uid), tipo));
   if (!foto) throw noEncontrado('La foto');
   res.set('Cache-Control', 'private, no-store').type(foto.tipo).send(foto.datos);
 });
@@ -135,7 +134,8 @@ rutasIdentidad.get('/:uid/fotos/:tipo', async (req, res) => {
 /** Pantalla oculta del validador: solicitudes pendientes, la más antigua primero. */
 rutasIdentidad.get('/pendientes', soloValidador, async (_req, res) => {
   const pendientes = (await almacen.usuarios.listar())
-    .filter((u) => u.identidad?.estado === 'PENDIENTE')
+    // Las cuentas de prueba vienen PENDIENTE sin DNI ni fotos: no hay nada que revisar.
+    .filter((u) => u.identidad?.estado === 'PENDIENTE' && Boolean(u.identidad.dni))
     .sort((a, b) => (a.identidad!.enviadaEn ?? 0) - (b.identidad!.enviadaEn ?? 0))
     .map((u) => ({
       uid: u.id,
@@ -173,8 +173,7 @@ rutasIdentidad.post('/:uid/revisar', soloValidador, async (req, res) => {
   });
   // Al aprobar, las fotos ya no se necesitan (minimización de datos, Ley 29733).
   if (aprobada) {
-    fotos.delete(claveFoto(uid, 'dni'));
-    fotos.delete(claveFoto(uid, 'selfie'));
+    await borrarFotosIdentidad(uid);
   }
 
   void notificar([uid], {

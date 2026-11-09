@@ -7,18 +7,10 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { CajaAviso } from '../componentes/CajaAviso';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { Pantalla } from '../componentes/Pantalla';
-import { Separador } from '../componentes/Separador';
 import { Titular } from '../componentes/Titular';
 
 /**
- * @description Google y el enlace por correo necesitan Firebase Auth, apagado mientras usamos la API simulada.
- */
-function pendiente(accion: string) {
-  Alert.alert(accion, 'Esta opción se activa cuando conectemos Firebase. Por ahora entra con tu correo y tu clave.');
-}
-
-/**
- * @description Inicio de sesión (P01, RF02, RF04, RF07) contra la API simulada; en desarrollo permite entrar sin cuenta.
+ * @description Inicio de sesión (P01, RF02, RF04, RF07) con Firebase Auth (vía la API); en desarrollo permite entrar sin cuenta.
  */
 export default function IngresarPantalla() {
   const { colores } = useTema();
@@ -75,18 +67,6 @@ export default function IngresarPantalla() {
         <Boton texto={enviando ? 'Ingresando…' : 'Ingresar'} icono="login" deshabilitado={enviando} onPress={enviar} />
       </View>
 
-      <Separador />
-
-      <View style={styles.alternativas}>
-        <Boton texto="Continuar con Google" icono="account_circle" variante="secundario" onPress={() => pendiente('Google')} />
-        <Boton
-          texto="Recibir un enlace por correo"
-          icono="link"
-          variante="secundario"
-          onPress={() => pendiente('Enlace mágico')}
-        />
-      </View>
-
       <View style={styles.registro}>
         <Text style={[TIPO.cuerpo, { color: colores.textoSecundario }]} maxFontSizeMultiplier={MAX_ESCALA_FUENTE}>
           ¿Aún no tienes cuenta?
@@ -112,7 +92,6 @@ export default function IngresarPantalla() {
 const styles = StyleSheet.create({
   formulario: { gap: ESPACIO.l },
   olvido: { alignSelf: 'flex-end', marginTop: -ESPACIO.s },
-  alternativas: { gap: ESPACIO.m },
   registro: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' },
   desarrollo: { gap: ESPACIO.m, marginTop: ESPACIO.s },
 });

@@ -5,9 +5,11 @@ import { almacen } from '../../datos/almacen.js';
 import type { Usuario } from '../../datos/tipos.js';
 import { cerrarSesionesDe, requiereSesion } from '../../nucleo/autenticacion.js';
 import { conflicto, datosInvalidos, ErrorHttp, noEncontrado } from '../../nucleo/errores.js';
+import { borrarArchivo, guardarArchivo, leerArchivo, MAX_BYTES_ARCHIVO } from '../../nucleo/archivos.js';
+import { actualizarNombreAuth, borrarCuentaAuth, USA_FIREBASE_AUTH } from '../../nucleo/firebaseAuth.js';
 import { leerBuzon, notificar } from '../../nucleo/notificar.js';
 import { numero, texto } from '../../nucleo/utilidades.js';
-import { aPublico } from '../auth/rutas.js';
+import { aPublico, verificarClaveActual } from '../auth/rutas.js';
 import { celdaDe } from '../emergencia/conteo.js';
 import { borrarFotosIdentidad } from '../identidad/rutas.js';
 import { exigirTelefonoLibre, normalizarTelefono, validarNombre, validarOficios } from '../auth/validaciones.js';
@@ -16,18 +18,24 @@ export const rutasVecinos = Router();
 rutasVecinos.use(requiereSesion);
 
 /** Fotos de perfil (RF06). Son públicas dentro de la comunidad: las sirve /avatares/:uid sin sesión. */
-const avatares = new Map<string, { tipo: string; datos: Buffer }>();
 export const rutasAvatares = Router();
-rutasAvatares.get('/:uid', (req, res) => {
-  const foto = avatares.get(String(req.params.uid));
+const rutaAvatar = (uid: string) => `avatares/${uid}`;
+rutasAvatares.get('/:uid', async (req, res) => {
+  const foto = await leerArchivo(rutaAvatar(String(req.params.uid)));
   if (!foto) throw noEncontrado('La foto');
   res.set('Cache-Control', 'public, max-age=86400').type(foto.tipo).send(foto.datos);
+});
+
+/** Perfil con sesión. Con Firebase Auth incluye si el correo ya fue verificado (sale del token). */
+const conCorreo = (usuario: Usuario, locals: Record<string, unknown>) => ({
+  ...aPublico(usuario),
+  correoVerificado: typeof locals.correoVerificado === 'boolean' ? locals.correoVerificado : null,
 });
 
 rutasVecinos.get('/yo', async (_req, res) => {
   const usuario = await almacen.usuarios.obtener(res.locals.uid);
   if (!usuario) throw noEncontrado('El usuario');
-  res.json(aPublico(usuario));
+  res.json(conCorreo(usuario, res.locals));
 });
 
 /** Actualiza nombre, barrio, teléfono u oficios (RF05). El resto de campos lo controla la API. */
@@ -53,7 +61,9 @@ rutasVecinos.patch('/yo', async (req, res) => {
 
   const usuario = await almacen.usuarios.actualizar(uid, cambios);
   if (!usuario) throw noEncontrado('El usuario');
-  res.json(aPublico(usuario));
+  // El nombre también se guarda en la cuenta de Firebase (lo usan sus correos).
+  if (USA_FIREBASE_AUTH && cambios.nombre) await actualizarNombreAuth(uid, cambios.nombre).catch(() => undefined);
+  res.json(conCorreo(usuario, res.locals));
 });
 
 /**
@@ -111,9 +121,9 @@ rutasVecinos.delete('/yo/dispositivos/:token', async (req, res) => {
 });
 
 /** Buzón para el sondeo de la app: notificaciones creadas después de `desde` (ms). */
-rutasVecinos.get('/yo/notificaciones', (req, res) => {
+rutasVecinos.get('/yo/notificaciones', async (req, res) => {
   const desde = Number(req.query.desde ?? 0);
-  res.json(leerBuzon(res.locals.uid, Number.isFinite(desde) ? desde : 0));
+  res.json(await leerBuzon(res.locals.uid, Number.isFinite(desde) ? desde : 0));
 });
 
 /**
@@ -136,7 +146,7 @@ rutasVecinos.post('/yo/notificaciones/prueba', async (req, res) => {
 
 // ---------- Foto de perfil (RF06) ----------
 
-const MAX_AVATAR_BYTES = 1024 * 1024;
+const MAX_AVATAR_BYTES = MAX_BYTES_ARCHIVO;
 
 /** Recibe la foto ya recortada y reducida por la app (512×512, JPEG) en data URI. */
 rutasVecinos.put('/yo/foto', async (req, res) => {
@@ -145,20 +155,20 @@ rutasVecinos.put('/yo/foto', async (req, res) => {
     typeof req.body?.imagen === 'string' ? /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.body.imagen) : null;
   if (!coincide) throw datosInvalidos('Envía la foto como imagen JPEG, PNG o WebP.');
   const datos = Buffer.from(coincide[2], 'base64');
-  if (datos.length > MAX_AVATAR_BYTES) throw datosInvalidos('La foto pesa más de 1 MB.');
-  avatares.set(uid, { tipo: coincide[1], datos });
+  if (datos.length > MAX_AVATAR_BYTES) throw datosInvalidos('La foto pesa demasiado (máximo 700 KB).');
+  await guardarArchivo(rutaAvatar(uid), { tipo: coincide[1], datos });
   // `v` cambia la URL para que la app no muestre la foto anterior guardada en caché.
   const usuario = await almacen.usuarios.actualizar(uid, { fotoUrl: `/avatares/${uid}?v=${Date.now()}` });
   if (!usuario) throw noEncontrado('El usuario');
-  res.json(aPublico(usuario));
+  res.json(conCorreo(usuario, res.locals));
 });
 
 rutasVecinos.delete('/yo/foto', async (_req, res) => {
   const uid: string = res.locals.uid;
-  avatares.delete(uid);
+  await borrarArchivo(rutaAvatar(uid));
   const usuario = await almacen.usuarios.actualizar(uid, { fotoUrl: null });
   if (!usuario) throw noEncontrado('El usuario');
-  res.json(aPublico(usuario));
+  res.json(conCorreo(usuario, res.locals));
 });
 
 // ---------- Eliminar cuenta (derecho de cancelación, Ley 29733) ----------
@@ -169,16 +179,17 @@ rutasVecinos.post('/yo/eliminar', async (req, res) => {
   const usuario = await almacen.usuarios.obtener(uid);
   if (!usuario) throw noEncontrado('El usuario');
   if (req.body?.confirmacion !== 'ELIMINAR') throw datosInvalidos('Escribe ELIMINAR para confirmar.');
-  if (typeof req.body?.clave !== 'string' || req.body.clave !== usuario.clave) {
+  if (typeof req.body?.clave !== 'string' || !(await verificarClaveActual(usuario, req.body.clave))) {
     throw new ErrorHttp(400, 'CLAVE_INCORRECTA', 'La clave no es correcta.');
   }
   if (usuario.necesidadActivaId) {
     throw conflicto('Tienes un pedido de ayuda activo. Ciérralo o cancélalo antes de eliminar tu cuenta.');
   }
 
-  avatares.delete(uid);
-  borrarFotosIdentidad(uid);
+  await borrarArchivo(rutaAvatar(uid));
+  await borrarFotosIdentidad(uid);
   await almacen.usuarios.eliminar(uid);
   await cerrarSesionesDe(uid);
+  if (USA_FIREBASE_AUTH) await borrarCuentaAuth(uid);
   res.status(204).end();
 });

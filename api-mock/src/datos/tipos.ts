@@ -7,11 +7,13 @@ export interface Coordenada {
   lng: number;
 }
 
-/** `sesiones/{token}`: sesión simulada (hasta pasar a Firebase Auth). */
+/** `sesiones/{token}`: sesión del modo local (AUTENTICACION=local). Con Firebase Auth no se usa. */
 export interface Sesion {
   id: string;
   uid: string;
   creadoEn: number;
+  /** Modo local: la sesión vence a los 30 días. Si falta (sesiones antiguas), se cuenta desde creadoEn. */
+  venceEn?: number;
 }
 
 /** Cuenta + perfil. `clave` nunca sale de la API (ver aPublico en modulos/auth). */
@@ -216,6 +218,52 @@ export interface ConteoCelda {
   ventanaDesde: number;
   ultimaAlertaEn: number | null;
   actualizadoEn: number;
+}
+
+// --- nucleo y cuentas (Persona A): colecciones de soporte en Firestore ---
+
+/** Código de 6 dígitos para recuperar la clave (RF07). El id es el correo. */
+export interface CodigoClave {
+  id: string;
+  codigo: string;
+  venceEn: number;
+  intentos: number;
+}
+
+/** Intentos fallidos de ingreso por correo (bloqueo de 15 min). El id es el correo. */
+export interface IntentoIngreso {
+  id: string;
+  fallos: number;
+  bloqueadoHasta: number;
+}
+
+/** Notificación en el buzón de un vecino (la recoge el sondeo de la app). */
+export interface NotificacionBuzon {
+  id: string;
+  uid: string;
+  creadaEn: number;
+  /** Carga con solo textos, igual a la que viaja por FCM. */
+  datos: Record<string, string>;
+}
+
+/** RN-20: acción de la bandeja de salida ya procesada. El id es la cabecera X-Id-Accion. */
+export interface AccionProcesada {
+  id: string;
+  estado: number;
+  /** Respuesta en JSON (texto) para devolverla igual si la acción se repite. */
+  cuerpo: string | null;
+  guardadoEn: number;
+}
+
+/** Foto guardada como documento (cabe en Firestore: < 1 MiB). El id es la ruta con «__» en vez de «/». */
+export interface ArchivoGuardado {
+  id: string;
+  ruta: string;
+  tipo: string;
+  /** Contenido en base64. */
+  base64: string;
+  bytes: number;
+  guardadoEn: number;
 }
 
 // --- modo emergencia (RF21–RF25, README 5.2) ---

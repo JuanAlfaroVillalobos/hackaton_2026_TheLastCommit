@@ -1,32 +1,56 @@
 // Ruta: src/nucleo/autenticacion.ts
-// Sesión simulada: el token es un UUID. Con ALMACEN=firestore se guarda en `sesiones/{token}`, así un
-// reinicio de la API (tsx watch recarga al guardar cualquier archivo) no saca a todos de la app; en
-// memoria se pierden al reiniciar. Al pasar a Firebase Auth, este middleware verifica el ID token con
-// firebase-admin (`getAuth().verifyIdToken`) y deja el uid en `res.locals.uid`.
+// Quién hace la petición. Dos modos, según AUTENTICACION en .env:
+//  - firebase: el token es un ID token de Firebase Auth y se verifica con firebase-admin.
+//  - local (por defecto): el token es un UUID guardado en `sesiones/{token}` (Firestore con
+//    ALMACEN=firestore, así un reinicio de la API no saca a todos de la app; memoria si no).
+// En ambos, el uid queda en `res.locals.uid` y las rutas no cambian.
 import { randomUUID } from 'node:crypto';
 import type { RequestHandler } from 'express';
 import { almacen } from '../datos/almacen.js';
+import type { Sesion } from '../datos/tipos.js';
 import { ErrorHttp } from './errores.js';
+import { revocarSesionesAuth, USA_FIREBASE_AUTH, verificarToken } from './firebaseAuth.js';
 
-/** Caché token → uid, para no leer Firestore en cada petición. */
-const cache = new Map<string, string>();
+/** Una sesión local dura 30 días desde que se abre. */
+const DURACION_MS = 30 * 24 * 60 * 60 * 1000;
+/** Caché en memoria para no leer Firestore en cada petición. */
+const CACHE_MS = 60_000;
+const cache = new Map<string, { uid: string; hasta: number }>();
 
-export async function abrirSesion(uid: string): Promise<string> {
+/** Lo que devuelven ingresar, registro, restablecer y renovar. */
+export interface TokensSesion {
+  token: string;
+  /** Solo con Firebase Auth: para pedir un token nuevo cuando el actual vence. */
+  renovacion: string | null;
+  expiraEn: number;
+}
+
+const venceEn = (s: Sesion) => s.venceEn ?? s.creadoEn + DURACION_MS;
+
+/**
+ * @description Abre una sesión local para el usuario y devuelve su token (modo local).
+ */
+export async function abrirSesion(uid: string): Promise<TokensSesion> {
   const token = randomUUID();
-  await almacen.sesiones.guardar({ id: token, uid, creadoEn: Date.now() });
-  cache.set(token, uid);
-  return token;
+  const ahora = Date.now();
+  await almacen.sesiones.guardar({ id: token, uid, creadoEn: ahora, venceEn: ahora + DURACION_MS });
+  cache.set(token, { uid, hasta: ahora + CACHE_MS });
+  return { token, renovacion: null, expiraEn: ahora + DURACION_MS };
 }
 
 export async function cerrarSesion(token: string): Promise<void> {
   cache.delete(token);
-  await almacen.sesiones.eliminar(token);
+  if (!USA_FIREBASE_AUTH) await almacen.sesiones.eliminar(token);
 }
 
-/** Cierra todas las sesiones de un usuario (cambio de clave, cuenta eliminada), salvo `excepto`. */
+/**
+ * @description Cierra todas las sesiones de un usuario (cambio de clave, cuenta eliminada), salvo `excepto` en modo local.
+ */
 export async function cerrarSesionesDe(uid: string, excepto?: string | null): Promise<void> {
-  for (const [token, dueno] of cache) {
-    if (dueno === uid && token !== excepto) cache.delete(token);
+  for (const [token, c] of cache) if (c.uid === uid && token !== excepto) cache.delete(token);
+  if (USA_FIREBASE_AUTH) {
+    await revocarSesionesAuth(uid).catch(() => undefined);
+    return;
   }
   const sesiones = await almacen.sesiones.listar({ uid });
   await Promise.all(sesiones.filter((s) => s.id !== excepto).map((s) => almacen.sesiones.eliminar(s.id)));
@@ -37,25 +61,46 @@ export function leerToken(cabecera: string | undefined): string | null {
   return tipo === 'Bearer' && token ? token : null;
 }
 
-async function uidDe(token: string): Promise<string | undefined> {
+/**
+ * @description Devuelve el uid dueño de un token local, o null si no existe o venció.
+ */
+async function uidDeTokenLocal(token: string): Promise<string | null> {
   const enCache = cache.get(token);
-  if (enCache) return enCache;
+  if (enCache && enCache.hasta > Date.now()) return enCache.uid;
+
   const sesion = await almacen.sesiones.obtener(token);
-  if (sesion) cache.set(token, sesion.uid);
-  return sesion?.uid;
+  if (!sesion || venceEn(sesion) < Date.now()) {
+    cache.delete(token);
+    if (sesion) await almacen.sesiones.eliminar(token).catch(() => undefined);
+    return null;
+  }
+  cache.set(token, { uid: sesion.uid, hasta: Date.now() + CACHE_MS });
+  return sesion.uid;
 }
 
 /** Exige `Authorization: Bearer <token>` y deja el uid en `res.locals.uid`. */
-export const requiereSesion: RequestHandler = (req, res, next) => {
+export const requiereSesion: RequestHandler = async (req, res, next) => {
   const token = leerToken(req.headers.authorization);
-  const continuar = (uid: string | undefined) => {
+  if (!token) {
+    next(new ErrorHttp(401, 'SIN_SESION', 'Inicia sesión para continuar.'));
+    return;
+  }
+  try {
+    if (USA_FIREBASE_AUTH) {
+      const decodificado = await verificarToken(token);
+      res.locals.uid = decodificado.uid;
+      res.locals.correoVerificado = decodificado.email_verified === true;
+      next();
+      return;
+    }
+    const uid = await uidDeTokenLocal(token);
     if (!uid) {
       next(new ErrorHttp(401, 'SIN_SESION', 'Inicia sesión para continuar.'));
       return;
     }
     res.locals.uid = uid;
     next();
-  };
-  if (!token) return continuar(undefined);
-  uidDe(token).then(continuar, next);
+  } catch (error) {
+    next(error);
+  }
 };

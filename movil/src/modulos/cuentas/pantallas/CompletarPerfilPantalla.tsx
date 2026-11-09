@@ -11,6 +11,7 @@ import { Pantalla } from '../componentes/Pantalla';
 import { Titular } from '../componentes/Titular';
 import { usePermisos, type EstadoPermisoApp, type IdPermiso } from '../hooks/usePermisos';
 import { cambiarFotoPerfil, quitarFotoPerfil } from '../servicios/fotoPerfil';
+import { volver } from '@/nucleo/navegacion';
 
 const MAX_OFICIOS = 5;
 
@@ -66,9 +67,13 @@ export default function CompletarPerfilPantalla() {
       {
         text: 'Quitar foto',
         style: 'destructive',
-        onPress: () => void quitarFotoPerfil().then(() => recargarPerfil()).catch(() => undefined),
+        onPress: () =>
+          void quitarFotoPerfil()
+            .then(() => recargarPerfil())
+            .catch((error: unknown) => Alert.alert('No se quitó tu foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.')),
       },
-      { text: 'Cambiar foto', onPress: () => void cambiarFoto() },
+      // Pequeña espera: abrir otro diálogo mientras este se cierra falla en algunos Android e iOS.
+      { text: 'Cambiar foto', onPress: () => setTimeout(() => void cambiarFoto(), 350) },
     ]);
   };
 
@@ -94,12 +99,12 @@ export default function CompletarPerfilPantalla() {
                 })();
               },
             },
-            { text: 'Continuar igual', onPress: () => router.back() },
+            { text: 'Continuar igual', onPress: () => volver() },
           ],
         );
         return;
       }
-      router.back();
+      volver();
     } catch (error) {
       Alert.alert('No se guardaron tus oficios', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
     } finally {

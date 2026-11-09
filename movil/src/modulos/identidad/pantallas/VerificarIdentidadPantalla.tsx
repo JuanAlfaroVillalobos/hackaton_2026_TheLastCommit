@@ -6,7 +6,7 @@ import { estaEnLinea } from '@/nucleo/red';
 import { useSesion } from '@/nucleo/sesion';
 import { CajaAviso, CampoTexto, CasillaAceptar, Pantalla, Titular } from '@/modulos/cuentas';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { CapturaFoto } from '../componentes/CapturaFoto';
@@ -14,12 +14,18 @@ import { InsigniaVerificada } from '../componentes/InsigniaVerificada';
 import { errorDni, errorNombres, normalizarComoDni } from '../reglas';
 import { enviarIdentidad, obtenerMiIdentidad } from '../servicios/identidadServicio';
 import type { ResumenIdentidad } from '../tipos';
+import { volver } from '@/nucleo/navegacion';
 
 type Campo = 'dni' | 'nombres' | 'apellidos' | 'fotoDni' | 'selfie' | 'consentimiento';
 type Foto = { uri: string; dataUri: string } | null;
 
+/** «8 de noviembre a las 5:07 p. m.» (sin el punto final de «p. m.», que se juntaría con el de la frase). */
 const formatoFecha = (ms: number | null) =>
-  ms ? new Date(ms).toLocaleString('es-PE', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  ms
+    ? new Date(ms)
+        .toLocaleString('es-PE', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
+        .replace(/\.$/, '')
+    : '';
 
 /**
  * @description Paso numerado del proceso de verificación, con marca ✓ cuando está completo.
@@ -128,12 +134,19 @@ export default function VerificarIdentidadPantalla() {
   const limpiarApi = (c: Campo) => setErrorApi((e) => ({ ...e, [c]: undefined }));
 
   const tomar = async (tipo: 'fotoDni' | 'selfie') => {
-    const foto = await obtenerFoto({
-      origen: 'camara',
-      camaraFrontal: tipo === 'selfie',
-      ladoMax: 1280,
-      calidad: 0.7,
-    });
+    let foto: Awaited<ReturnType<typeof obtenerFoto>>;
+    try {
+      foto = await obtenerFoto({
+        origen: 'camara',
+        camaraFrontal: tipo === 'selfie',
+        // Cada foto debe pesar menos de 700 KB para guardarse en Firestore.
+        ladoMax: 1024,
+        calidad: 0.6,
+      });
+    } catch (error) {
+      Alert.alert(tipo === 'selfie' ? 'No se tomó tu selfie' : 'No se tomó la foto del DNI', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+      return;
+    }
     if (!foto) return;
     (tipo === 'fotoDni' ? setFotoDni : setSelfie)({ uri: foto.uri, dataUri: foto.dataUri });
     tocar(tipo);
@@ -259,7 +272,7 @@ export default function VerificarIdentidadPantalla() {
         >
           <InsigniaVerificada estado="VERIFICADA" />
         </TarjetaEstado>
-        <Boton texto="Volver a mi perfil" icono="arrow_back" onPress={() => router.back()} />
+        <Boton texto="Volver a mi perfil" icono="arrow_back" onPress={() => volver()} />
       </Pantalla>
     );
   }

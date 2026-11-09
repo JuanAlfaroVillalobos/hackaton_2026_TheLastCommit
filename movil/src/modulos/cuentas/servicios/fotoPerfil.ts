@@ -9,7 +9,7 @@ import { elegirOrigenYObtenerFoto } from '@/nucleo/imagenes';
 export async function cambiarFotoPerfil(): Promise<boolean> {
   const foto = await elegirOrigenYObtenerFoto({ cuadrada: true, ladoMax: 512, calidad: 0.8 });
   if (!foto) return false;
-  await api('/vecinos/yo/foto', { metodo: 'PUT', cuerpo: { imagen: foto.dataUri } });
+  await api('/vecinos/yo/foto', { metodo: 'PUT', cuerpo: { imagen: foto.dataUri }, tiempoMs: 45_000 });
   return true;
 }
 

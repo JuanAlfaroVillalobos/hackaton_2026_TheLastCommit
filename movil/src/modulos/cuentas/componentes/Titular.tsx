@@ -1,7 +1,7 @@
 import { ESPACIO, MAX_ESCALA_FUENTE, TIPO, useTema } from '@/compartido/tema';
 import { Icono } from '@/compartido/ui';
-import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { volver } from '@/nucleo/navegacion';
 
 type Props = {
   etiqueta?: string;
@@ -23,7 +23,7 @@ export function Titular({ etiqueta, titulo, subtitulo, conVolver = false }: Prop
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Volver"
-          onPress={() => router.back()}
+          onPress={() => volver()}
           hitSlop={12}
           style={styles.volver}
         >

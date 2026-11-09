@@ -5,17 +5,21 @@
 //   2. GOOGLE_APPLICATION_CREDENTIALS=./credenciales/cuenta-servicio.json → cuenta de servicio del proyecto.
 //   3. `gcloud auth application-default login` → credenciales por defecto de tu usuario de Google.
 // firebase-admin ignora las reglas de Firestore: la API es la única que escribe.
-import { getApps, initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
 export const PROYECTO_FIREBASE = process.env.FIREBASE_PROJECT_ID ?? 'vecinos-thelastcommit';
 
 let db: Firestore | null = null;
 
+/** App de firebase-admin compartida por Firestore, Storage y FCM. */
+export function appFirebase(): App {
+  return getApps()[0] ?? initializeApp({ projectId: PROYECTO_FIREBASE });
+}
+
 export function firestore(): Firestore {
   if (db) return db;
-  const app = getApps()[0] ?? initializeApp({ projectId: PROYECTO_FIREBASE });
-  db = getFirestore(app);
+  db = getFirestore(appFirebase());
   // Los campos opcionales que llegan como undefined se omiten en vez de romper la escritura.
   db.settings({ ignoreUndefinedProperties: true });
   return db;

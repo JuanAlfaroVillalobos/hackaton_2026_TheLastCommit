@@ -5,9 +5,20 @@ API REST en Express. La app solo hace `fetch` (funciona en Expo Go, sin el SDK d
 | Colección | Dónde vive |
 | --- | --- |
 | `usuarios`, `alertas`, `celdas`, `emergencias` (+ `emergencias/{id}/vecinos`) | Firestore con `ALMACEN=firestore`; memoria si no |
-| Todo lo demás, y las sesiones, el buzón de notificaciones y las fotos | Memoria (se reinicia al levantar el servidor) |
+| `sesiones`, `codigosClave`, `intentosIngreso`, `notificaciones`, `accionesProcesadas` (cuentas y nucleo) | Firestore con `ALMACEN=firestore`; memoria si no |
+| `archivos`: fotos de perfil, DNI y selfie (base64, máx. 700 KB) | Firestore con `ALMACEN=firestore`; memoria si no. Opcional: Cloud Storage con `ARCHIVOS=storage` |
+| Cuentas y claves | Firebase Auth con `AUTENTICACION=firebase`; si no, sesiones propias de la API |
+| Todo lo demás | Memoria (se reinicia al levantar el servidor) |
 
-Al reiniciar la API las sesiones se pierden: hay que volver a ingresar en la app.
+### Firebase Auth (`AUTENTICACION=firebase`)
+
+Las cuentas viven en Firebase Authentication con el mismo uid que su perfil en `usuarios`. Firebase guarda y verifica la clave, envía el correo para **recuperarla** (enlace) y el de **verificación**, y frena los intentos repetidos. La app sigue hablando solo con esta API (funciona en Expo Go, en la web y en el development build): `POST /auth/ingresar` devuelve `{ token, renovacion, expiraEn, usuario }`; el token dura 1 h y la app lo renueva sola con `POST /auth/renovar`.
+
+- **Emulador** (recomendado): `firebase emulators:start --only firestore,auth` y `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Los correos no se envían: el enlace aparece en la consola del emulador y en `http://localhost:4000/auth`.
+- **Proyecto real**: comenta `FIREBASE_AUTH_EMULATOR_HOST`, define `FIREBASE_WEB_API_KEY` (Consola → Configuración del proyecto → General → Clave de API web) y `GOOGLE_APPLICATION_CREDENTIALS`. Activa *Correo electrónico/contraseña* en Authentication → Método de acceso.
+- Al arrancar se crean las cuentas de prueba (`ana@vecinos.pe`, … con la clave `vecinos123`). Las cuentas creadas antes en modo local pasan a Firebase en su primer ingreso, con su misma clave.
+
+En modo local, las claves se guardan cifradas con scrypt. Al arrancar con Firestore se crean las cuentas sembradas que falten y se reparan los punteros `necesidadActivaId`/`servicioActivoId` que apunten a publicaciones que ya no existen.
 
 ## Levantar
 
@@ -23,7 +34,8 @@ npm run dev          # http://localhost:3000/api/v1, se recarga al guardar
 `.env.ejemplo` viene listo para el **emulador local** (recomendado: no toca el proyecto real ni pide credenciales). Necesita Java 11+ y `npm i -g firebase-tools`. Desde la raíz del repo:
 
 ```bash
-firebase emulators:start --only firestore   # UI con los documentos en http://localhost:4000
+firebase emulators:start --only firestore        # UI con los documentos en http://localhost:4000
+firebase emulators:start --only firestore,auth   # con AUTENTICACION=firebase (también las cuentas)
 # para conservar los datos al apagarlo: --import=./.emulador --export-on-exit
 ```
 
@@ -42,7 +54,7 @@ La consola muestra la URL que usa el celular (`http://<ip-de-tu-compu>:3000/api/
 
 - **Correo:** `ana@vecinos.pe` · **Clave:** `vecinos123` (todas las cuentas sembradas usan esa clave)
 
-Variables (ver `.env.ejemplo`): `ALMACEN`, `FIREBASE_PROJECT_ID`, `FIRESTORE_EMULATOR_HOST`, `GOOGLE_APPLICATION_CREDENTIALS`, `FCM_CUENTA_SERVICIO`, `PORT` (por defecto 3000), `RETRASO_MS` (latencia artificial para ver los estados de carga) y las del modo emergencia (`EMERGENCIA_*`, ver abajo).
+Variables (ver `.env.ejemplo`): `ALMACEN`, `FIREBASE_PROJECT_ID`, `FIRESTORE_EMULATOR_HOST`, `GOOGLE_APPLICATION_CREDENTIALS`, `AUTENTICACION`, `FIREBASE_AUTH_EMULATOR_HOST`, `FIREBASE_WEB_API_KEY`, `ARCHIVOS`, `FIREBASE_STORAGE_BUCKET`, `FCM`, `MOSTRAR_CODIGO_DEMO`, `PORT` (por defecto 3000), `RETRASO_MS` (latencia artificial para ver los estados de carga) y las del modo emergencia (`EMERGENCIA_*`, ver abajo).
 
 Lo que está en memoria se reinicia cada vez que se levanta el servidor.
 
@@ -98,6 +110,10 @@ Todas las rutas van bajo `/api/v1` y, salvo `auth/registro` y `auth/ingresar`, p
 | POST | `/auth/ingresar` | `{ correo, clave }` → `{ token, usuario }` |
 | GET | `/auth/yo` | Usuario de la sesión |
 | POST | `/auth/salir` | Cierra la sesión |
+| POST | `/auth/renovar` | Firebase Auth: `{ renovacion }` → token nuevo |
+| POST | `/auth/recuperar` | `{ correo }` → `{ modo: 'enlace' }` (Firebase envía el correo) o `{ modo: 'codigo', codigoDemo? }` (local) |
+| POST | `/auth/verificar-correo` | Firebase Auth: reenvía el correo de verificación |
+| POST | `/auth/cambiar-clave` | `{ actual, nueva }`; con Firebase devuelve tokens nuevos |
 | GET · PATCH | `/vecinos/yo` | Perfil; el PATCH acepta `nombre`, `barrio` y `oficios` |
 | GET | `/favores/publicaciones?estado=` | Muro (P04); filtra distancia, vigencia y oficio en la app |
 | GET | `/favores/mis-publicaciones` | Publicaciones propias y favores en que participas |

@@ -8,8 +8,15 @@ export const panelDev = Router();
 
 type Coleccion = keyof typeof almacen;
 
+/** Colecciones que no se muestran: tokens de sesión y registros técnicos. */
+const OCULTAS = new Set<Coleccion>(['sesiones', 'accionesProcesadas']);
+
 /** Quita lo que no debe verse ni en desarrollo. */
 function limpiar(coleccion: Coleccion, fila: Record<string, unknown>): Record<string, unknown> {
+  if (coleccion === 'archivos') {
+    const { base64: _b, ...resto } = fila;
+    return resto;
+  }
   if (coleccion !== 'usuarios') return fila;
   const { clave: _c, dispositivos, identidad, ...resto } = fila as Record<string, unknown> & {
     dispositivos?: string[];
@@ -25,7 +32,7 @@ function limpiar(coleccion: Coleccion, fila: Record<string, unknown>): Record<st
 async function leerTodo() {
   const datos: Record<string, Record<string, unknown>[]> = {};
   for (const nombre of Object.keys(almacen) as Coleccion[]) {
-    if (nombre === 'sesiones') continue; // son tokens: nunca se muestran
+    if (OCULTAS.has(nombre)) continue;
     const filas = (await almacen[nombre].listar()) as unknown as Record<string, unknown>[];
     datos[nombre] = filas.map((f) => limpiar(nombre, f));
   }
